@@ -1,8 +1,10 @@
 import os
+import copy
 
 
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2 as cv
 import torch
 from torch.optim import Adam
 from torch import nn
@@ -116,16 +118,82 @@ def prepare_optimizers(d_net, g_net):
     return d_opt, g_opt
 
 
+def same_weights(model1, model2):
+    for p1, p2 in zip(model1.parameters(), model2.parameters()):
+        if p1.data.ne(p2.data).sum() > 0:
+            return False
+    return True
+
+
+def compose_imgs(batch):
+    imgs = []
+    for img in batch:
+        img = np.moveaxis(img.to('cpu').numpy(), 0, 2)
+        img += 1.
+        img /= 2.
+        imgs.append(np.uint8(img * 255))
+    return np.hstack(imgs)
+
+
 if __name__ == "__main__":
+    batch_size = 100
     dataset_path = os.path.join(os.path.dirname(__file__), 'data', 'MNIST')
+    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir')
+    os.makedirs(debug_path, exist_ok=True)
     mnist_dataset = get_mnist_dataset(dataset_path)
-    mnist_data_loader = DataLoader(mnist_dataset, batch_size=5, shuffle=True)
+    mnist_data_loader = DataLoader(mnist_dataset, batch_size=batch_size, shuffle=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # checking whether you have a GPU
 
     d_net, g_net = prepare_nets(device)
     d_opt, g_opt = prepare_optimizers(d_net, g_net)
-    loss = nn.BCELoss()
+    loss_fn = nn.BCELoss()
+    num_epochs = 200
 
-    for batch, label in mnist_data_loader:
-        plot_single_img_from_tensor_batch(batch)
+    ref_noise_batch = torch.randn((5, 100), device=device)
+
+    for epoch in range(num_epochs):
+        for cnt, (real_batch, label) in enumerate(mnist_data_loader):
+            print(f'Training. Epoch = {epoch} batch = {cnt}.')
+            real_batch = real_batch.view(real_batch.shape[0], -1)
+            real_batch = real_batch.to(device)
+
+            # Train discriminator net
+            real_predictions = d_net(real_batch)
+            real_gt = torch.ones((batch_size, 1), device=device)
+            loss = loss_fn(real_predictions, real_gt)
+            loss.backward()
+
+            noise_batch = torch.randn((batch_size, 100), device=device)
+            fake_batch = g_net(noise_batch)
+            fake_predictions = d_net(fake_batch)
+            fake_gt = torch.zeros((batch_size, 1), device=device)
+            loss = loss_fn(fake_predictions, fake_gt)
+            loss.backward()
+
+            d_opt.step()
+            d_opt.zero_grad()
+
+            # Train generator net
+            noise_batch = torch.randn((batch_size, 100), device=device)
+            generated_batch = g_net(noise_batch)
+            predictions = d_net(generated_batch)
+            target_gt = torch.ones((batch_size, 1), device=device)
+            loss = loss_fn(predictions, target_gt)
+            loss.backward()
+
+            g_opt.step()
+            g_opt.zero_grad()
+
+            if epoch % 2 == 0 and cnt == 0:
+                with torch.no_grad():
+                    generated_batch = g_net(ref_noise_batch)
+                    generated_batch = generated_batch.view(generated_batch.shape[0], 1, 28, 28)
+                    new_real_batch = real_batch.view(real_batch.shape[0], 1, 28, 28)
+                    composed = compose_imgs(generated_batch)
+                    real_composed = compose_imgs(new_real_batch[:5])
+                    plt.imshow(np.repeat(real_composed, 3, axis=2))
+                    plt.show()
+                    plt.imshow(np.repeat(composed, 3, axis=2))
+                    plt.show()
+                    cv.imwrite(os.path.join(debug_path, f'{epoch}_{cnt}.jpg'), composed)
