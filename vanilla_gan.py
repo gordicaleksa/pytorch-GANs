@@ -139,7 +139,7 @@ def compose_imgs(batch):
 if __name__ == "__main__":
     batch_size = 100
     dataset_path = os.path.join(os.path.dirname(__file__), 'data', 'MNIST')
-    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir')
+    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir2')
     os.makedirs(debug_path, exist_ok=True)
     mnist_dataset = get_mnist_dataset(dataset_path)
     mnist_data_loader = DataLoader(mnist_dataset, batch_size=batch_size, shuffle=True)
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
     ref_noise_batch = torch.randn((5, 100), device=device)
     g_steps = 1
-    d_steps = 5
+    d_steps = 3
 
     real_losses = []
     fake_losses = []
@@ -209,14 +209,14 @@ if __name__ == "__main__":
                     composed = compose_imgs(generated_batch)
                     real_composed = compose_imgs(new_real_batch[:5])
 
-                    if epoch % 1 == 0 and cnt == 0:
-                        plt.imshow(np.vstack([np.repeat(real_composed, 3, axis=2), np.repeat(composed, 3, axis=2)]))
-                        plt.show()
-
-                        plt.plot(real_losses, 'r', label='d real loss')  # plotting t, a separately
-                        plt.plot(fake_losses, 'b', label='d fake loss')  # plotting t, b separately
-                        plt.plot(losses, 'g', label='g loss')  # plotting t, c separately
-                        plt.legend()
-                        plt.show()
+                    # if epoch % 1 == 0 and cnt == 0:
+                    #     plt.imshow(np.vstack([np.repeat(real_composed, 3, axis=2), np.repeat(composed, 3, axis=2)]))
+                    #     plt.show()
+                    #
+                    #     plt.plot(real_losses, 'r', label='d real loss')  # plotting t, a separately
+                    #     plt.plot(fake_losses, 'b', label='d fake loss')  # plotting t, b separately
+                    #     plt.plot(losses, 'g', label='g loss')  # plotting t, c separately
+                    #     plt.legend()
+                    #     plt.show()
 
                     cv.imwrite(os.path.join(debug_path, f'{epoch}_{cnt}.jpg'), cv.resize(composed, (0,0), fx=5, fy=5, interpolation=cv.INTER_NEAREST))
