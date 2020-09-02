@@ -28,8 +28,19 @@ def plot_single_img_from_tensor_batch(batch):
     plt.imshow(img)
     plt.show()
 
+# todo: create a video of the debug imagery
+# todo: create fine step interpolation imagery and make a video out of those
+# todo: try out save_image from torchvision.utils
 
-# todo: use Goodfellow's original MLP architectures
+# todo: add TFD dataset
+
+# todo: modify archs and see how it behaves
+# todo: Try 1D normalization in generator and discriminator (like in DCGAN)
+# todo: use ReLU in generator instead of leaky, compare leaky vs non-leaky ReLU
+# todo: do view inside the archs themself
+
+# todo: try changing Adams beta1 to 0.5 (like in DCGAN)
+# todo: try out SGD for discriminator net
 class DiscriminatorNet(torch.nn.Module):
     """
     4-layer MLP discriminative neural network
@@ -111,10 +122,9 @@ def prepare_nets(device):
     return d_net, g_net
 
 
-# todo: try out SGD for discriminator net
 def prepare_optimizers(d_net, g_net):
-    d_opt = Adam(d_net.parameters())
-    g_opt = Adam(g_net.parameters())
+    d_opt = Adam(d_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
+    g_opt = Adam(g_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
     return d_opt, g_opt
 
 
@@ -138,8 +148,8 @@ def compose_imgs(batch):
 
 if __name__ == "__main__":
     batch_size = 100
-    dataset_path = os.path.join(os.path.dirname(__file__), 'data', 'MNIST')
-    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir2')
+    dataset_path = os.path.join(os.path.dirname(__file__), 'data')
+    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir_dstep1_betas')
     os.makedirs(debug_path, exist_ok=True)
     mnist_dataset = get_mnist_dataset(dataset_path)
     mnist_data_loader = DataLoader(mnist_dataset, batch_size=batch_size, shuffle=True)
@@ -153,7 +163,7 @@ if __name__ == "__main__":
 
     ref_noise_batch = torch.randn((5, 100), device=device)
     g_steps = 1
-    d_steps = 3
+    d_steps = 1
 
     real_losses = []
     fake_losses = []
