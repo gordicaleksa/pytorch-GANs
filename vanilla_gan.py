@@ -129,6 +129,7 @@ def compose_imgs(batch):
     imgs = []
     for img in batch:
         img = np.moveaxis(img.to('cpu').numpy(), 0, 2)
+        print(np.min(img), np.max(img), len(np.unique(img)), np.unique(img)[:4])
         img += 1.
         img /= 2.
         imgs.append(np.uint8(img * 255))
@@ -151,49 +152,71 @@ if __name__ == "__main__":
     num_epochs = 200
 
     ref_noise_batch = torch.randn((5, 100), device=device)
+    g_steps = 1
+    d_steps = 5
 
+    real_losses = []
+    fake_losses = []
+    losses = []
     for epoch in range(num_epochs):
         for cnt, (real_batch, label) in enumerate(mnist_data_loader):
-            print(f'Training. Epoch = {epoch} batch = {cnt}.')
+            if cnt % 100 == 0:
+                print(f'Training. Epoch = {epoch} batch = {cnt}.')
+
             real_batch = real_batch.view(real_batch.shape[0], -1)
             real_batch = real_batch.to(device)
 
             # Train discriminator net
             real_predictions = d_net(real_batch)
             real_gt = torch.ones((batch_size, 1), device=device)
-            loss = loss_fn(real_predictions, real_gt)
-            loss.backward()
+            real_loss = loss_fn(real_predictions, real_gt)
+            real_loss.backward()
+            if cnt % d_steps == 0:
+                real_losses.append(real_loss.item())
 
             noise_batch = torch.randn((batch_size, 100), device=device)
             fake_batch = g_net(noise_batch)
-            fake_predictions = d_net(fake_batch)
+            fake_predictions = d_net(fake_batch.detach())
             fake_gt = torch.zeros((batch_size, 1), device=device)
-            loss = loss_fn(fake_predictions, fake_gt)
-            loss.backward()
+            fake_loss = loss_fn(fake_predictions, fake_gt)
+            fake_loss.backward()
+            if cnt % d_steps == 0:
+                fake_losses.append(fake_loss.item())
 
             d_opt.step()
-            d_opt.zero_grad()
+            d_net.zero_grad()
 
-            # Train generator net
-            noise_batch = torch.randn((batch_size, 100), device=device)
-            generated_batch = g_net(noise_batch)
-            predictions = d_net(generated_batch)
-            target_gt = torch.ones((batch_size, 1), device=device)
-            loss = loss_fn(predictions, target_gt)
-            loss.backward()
+            if cnt % d_steps == 0:
+                # Train generator net
+                noise_batch = torch.randn((batch_size, 100), device=device)
+                generated_batch = g_net(noise_batch)
+                predictions = d_net(generated_batch)
+                target_gt = torch.ones((batch_size, 1), device=device)
+                loss = loss_fn(predictions, target_gt)
+                loss.backward()
+                losses.append(loss.item())
 
-            g_opt.step()
-            g_opt.zero_grad()
+                g_opt.step()
 
-            if epoch % 2 == 0 and cnt == 0:
+                g_opt.zero_grad()
+                d_net.zero_grad()
+
+            if cnt % 50 == 0:
                 with torch.no_grad():
                     generated_batch = g_net(ref_noise_batch)
                     generated_batch = generated_batch.view(generated_batch.shape[0], 1, 28, 28)
                     new_real_batch = real_batch.view(real_batch.shape[0], 1, 28, 28)
                     composed = compose_imgs(generated_batch)
                     real_composed = compose_imgs(new_real_batch[:5])
-                    plt.imshow(np.repeat(real_composed, 3, axis=2))
-                    plt.show()
-                    plt.imshow(np.repeat(composed, 3, axis=2))
-                    plt.show()
-                    cv.imwrite(os.path.join(debug_path, f'{epoch}_{cnt}.jpg'), composed)
+
+                    if epoch % 1 == 0 and cnt == 0:
+                        plt.imshow(np.vstack([np.repeat(real_composed, 3, axis=2), np.repeat(composed, 3, axis=2)]))
+                        plt.show()
+
+                        plt.plot(real_losses, 'r', label='d real loss')  # plotting t, a separately
+                        plt.plot(fake_losses, 'b', label='d fake loss')  # plotting t, b separately
+                        plt.plot(losses, 'g', label='g loss')  # plotting t, c separately
+                        plt.legend()
+                        plt.show()
+
+                    cv.imwrite(os.path.join(debug_path, f'{epoch}_{cnt}.jpg'), cv.resize(composed, (0,0), fx=5, fy=5, interpolation=cv.INTER_NEAREST))
