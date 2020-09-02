@@ -1,38 +1,19 @@
 import os
 import copy
+import argparse
 
 
-import numpy as np
-import matplotlib.pyplot as plt
 import cv2 as cv
 import torch
-from torch.optim import Adam
 from torch import nn
-from torch.utils.data import DataLoader
-from torchvision import transforms, datasets
 
-
-def get_mnist_dataset(dataset_path):
-    # It's good to normalize the images to [-1, 1] range https://github.com/soumith/ganhacks
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((.5,), (.5,))
-    ])
-    return datasets.MNIST(root=dataset_path, train=True, download=True, transform=transform)
-
-
-def plot_single_img_from_tensor_batch(batch):
-    img = batch[0].numpy()
-    img = np.repeat(np.moveaxis(img, 0, 2), 3, axis=2)
-    print(img.shape, np.min(img), np.max(img))
-    plt.imshow(img)
-    plt.show()
+import utils.utils as utils
+from models.definitions.vanilla_gan_nets import get_vanilla_nets
 
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
 # todo: try out save_image from torchvision.utils
-
-# todo: add TFD dataset
+# todo: force mode collapse and add settings and results to readme
 
 # todo: modify archs and see how it behaves
 # todo: Try 1D normalization in generator and discriminator (like in DCGAN)
@@ -41,183 +22,99 @@ def plot_single_img_from_tensor_batch(batch):
 
 # todo: try changing Adams beta1 to 0.5 (like in DCGAN)
 # todo: try out SGD for discriminator net
-class DiscriminatorNet(torch.nn.Module):
-    """
-    4-layer MLP discriminative neural network
-    """
-
-    def __init__(self):
-        super().__init__()
-        num_neurons_per_layer = [784, 1024, 512, 256, 1]
-        leaky_relu_coeff = 0.2
-        dropout_prob = 0.3
-
-        self.layer1 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[0], num_neurons_per_layer[1]),
-            nn.LeakyReLU(leaky_relu_coeff),
-            nn.Dropout(dropout_prob)
-        )
-        self.layer2 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[1], num_neurons_per_layer[2]),
-            nn.LeakyReLU(leaky_relu_coeff),
-            nn.Dropout(dropout_prob)
-        )
-        self.layer3 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[2], num_neurons_per_layer[3]),
-            nn.LeakyReLU(leaky_relu_coeff),
-            nn.Dropout(dropout_prob)
-        )
-        self.layer4 = nn.Sequential(
-            torch.nn.Linear(num_neurons_per_layer[3], num_neurons_per_layer[4]),
-            torch.nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        return x
-
-
-class GeneratorNet(torch.nn.Module):
-    """
-    Simple 4-layer MLP generative neural network
-    """
-
-    def __init__(self):
-        super(GeneratorNet, self).__init__()
-        num_neurons_per_layer = [100, 256, 512, 1024, 784]
-        leaky_relu_coeff = 0.2
-
-        self.layer1 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[0], num_neurons_per_layer[1]),
-            nn.LeakyReLU(leaky_relu_coeff)
-        )
-        self.layer2 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[1], num_neurons_per_layer[2]),
-            nn.LeakyReLU(leaky_relu_coeff)
-        )
-        self.layer3 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[2], num_neurons_per_layer[3]),
-            nn.LeakyReLU(leaky_relu_coeff)
-        )
-
-        self.layer4 = nn.Sequential(
-            nn.Linear(num_neurons_per_layer[3], num_neurons_per_layer[4]),
-            nn.Tanh()
-        )
-
-    def forward(self, x):
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        return x
-
-
-def prepare_nets(device):
-    d_net = DiscriminatorNet().train().to(device)
-    g_net = GeneratorNet().train().to(device)
-    return d_net, g_net
-
-
-def prepare_optimizers(d_net, g_net):
-    d_opt = Adam(d_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
-    g_opt = Adam(g_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
-    return d_opt, g_opt
-
-
-def same_weights(model1, model2):
-    for p1, p2 in zip(model1.parameters(), model2.parameters()):
-        if p1.data.ne(p2.data).sum() > 0:
-            return False
-    return True
-
-
-def compose_imgs(batch):
-    imgs = []
-    for img in batch:
-        img = np.moveaxis(img.to('cpu').numpy(), 0, 2)
-        print(np.min(img), np.max(img), len(np.unique(img)), np.unique(img)[:4])
-        img += 1.
-        img /= 2.
-        imgs.append(np.uint8(img * 255))
-    return np.hstack(imgs)
 
 
 if __name__ == "__main__":
-    batch_size = 100
-    dataset_path = os.path.join(os.path.dirname(__file__), 'data')
-    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir_dstep1_betas')
+    #
+    # fixed args - don't change these unless you have a good reason
+    #
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    mnist_path = data_dir
+    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir_dstep1_betasbrt')
     os.makedirs(debug_path, exist_ok=True)
-    mnist_dataset = get_mnist_dataset(dataset_path)
-    mnist_data_loader = DataLoader(mnist_dataset, batch_size=batch_size, shuffle=True)
+
+    #
+    # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
+    # sorted so that the ones on the top are more likely to be changed than the ones on the bottom
+    #
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
+    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=50)
+    args = parser.parse_args()
+
+    batch_size = args.batch_size
+    num_epochs = args.num_epochs
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # checking whether you have a GPU
 
-    d_net, g_net = prepare_nets(device)
-    d_opt, g_opt = prepare_optimizers(d_net, g_net)
-    loss_fn = nn.BCELoss()
-    num_epochs = 200
+    # Prepare MNIST data loader (it will download MNIST the first time you run it)
+    mnist_data_loader = utils.get_mnist_data_loader(mnist_path, batch_size)
+
+    d_net, g_net = get_vanilla_nets(device)
+    d_opt, g_opt = utils.prepare_optimizers(d_net, g_net)
+
+    adversarial_loss = nn.BCELoss()
 
     ref_noise_batch = torch.randn((5, 100), device=device)
-    g_steps = 1
-    d_steps = 1
 
-    real_losses = []
-    fake_losses = []
-    losses = []
+    d_losses = []
+    g_losses = []
+
+    real_images_gt = torch.ones((batch_size, 1), device=device)
+    fake_images_gt = torch.zeros((batch_size, 1), device=device)
+
     for epoch in range(num_epochs):
-        for cnt, (real_batch, label) in enumerate(mnist_data_loader):
-            if cnt % 100 == 0:
-                print(f'Training. Epoch = {epoch} batch = {cnt}.')
+        for batch_idx, (real_batch, _) in enumerate(mnist_data_loader):
 
-            real_batch = real_batch.view(real_batch.shape[0], -1)
+            if batch_idx % 100 == 0:
+                print(f'Training. Epoch = {epoch} batch = {batch_idx}.')
+
             real_batch = real_batch.to(device)
+
+            #
+            # Train discriminator
+            #
+
+            d_net.zero_grad()
 
             # Train discriminator net
             real_predictions = d_net(real_batch)
-            real_gt = torch.ones((batch_size, 1), device=device)
-            real_loss = loss_fn(real_predictions, real_gt)
-            real_loss.backward()
-            if cnt % d_steps == 0:
-                real_losses.append(real_loss.item())
+            real_loss = adversarial_loss(real_predictions, real_images_gt)
 
-            noise_batch = torch.randn((batch_size, 100), device=device)
+            noise_batch = utils.get_latent_batch(batch_size, device)
             fake_batch = g_net(noise_batch)
             fake_predictions = d_net(fake_batch.detach())
-            fake_gt = torch.zeros((batch_size, 1), device=device)
-            fake_loss = loss_fn(fake_predictions, fake_gt)
-            fake_loss.backward()
-            if cnt % d_steps == 0:
-                fake_losses.append(fake_loss.item())
+            fake_loss = adversarial_loss(fake_predictions, fake_images_gt)
+            d_loss = real_loss + fake_loss
+
+            d_loss.backward()
+            d_losses.append(d_loss.item())
 
             d_opt.step()
-            d_net.zero_grad()
 
-            if cnt % d_steps == 0:
-                # Train generator net
-                noise_batch = torch.randn((batch_size, 100), device=device)
-                generated_batch = g_net(noise_batch)
-                predictions = d_net(generated_batch)
-                target_gt = torch.ones((batch_size, 1), device=device)
-                loss = loss_fn(predictions, target_gt)
-                loss.backward()
-                losses.append(loss.item())
+            #
+            # Train generator net
+            #
 
-                g_opt.step()
+            g_opt.zero_grad()
 
-                g_opt.zero_grad()
-                d_net.zero_grad()
+            noise_batch = utils.get_latent_batch(batch_size, device)
+            generated_batch = g_net(noise_batch)
+            predictions = d_net(generated_batch)
+            g_loss = adversarial_loss(predictions, real_images_gt)
 
-            if cnt % 50 == 0:
+            g_loss.backward()
+            g_losses.append(g_loss.item())
+
+            g_opt.step()
+
+            if batch_idx % 50 == 0:
                 with torch.no_grad():
                     generated_batch = g_net(ref_noise_batch)
                     generated_batch = generated_batch.view(generated_batch.shape[0], 1, 28, 28)
                     new_real_batch = real_batch.view(real_batch.shape[0], 1, 28, 28)
-                    composed = compose_imgs(generated_batch)
-                    real_composed = compose_imgs(new_real_batch[:5])
+                    composed = utils.compose_imgs(generated_batch)
+                    real_composed = utils.compose_imgs(new_real_batch[:5])
 
                     # if epoch % 1 == 0 and cnt == 0:
                     #     plt.imshow(np.vstack([np.repeat(real_composed, 3, axis=2), np.repeat(composed, 3, axis=2)]))
@@ -229,4 +126,4 @@ if __name__ == "__main__":
                     #     plt.legend()
                     #     plt.show()
 
-                    cv.imwrite(os.path.join(debug_path, f'{epoch}_{cnt}.jpg'), cv.resize(composed, (0,0), fx=5, fy=5, interpolation=cv.INTER_NEAREST))
+                    cv.imwrite(os.path.join(debug_path, f'{epoch}_{batch_idx}.jpg'), cv.resize(composed, (0, 0), fx=5, fy=5, interpolation=cv.INTER_NEAREST))
