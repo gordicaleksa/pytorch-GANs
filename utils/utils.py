@@ -7,6 +7,7 @@ from torch.optim import Adam
 
 
 from .constants import LATENT_SPACE_DIM
+from models.definitions.vanilla_gan_nets import DiscriminatorNet, GeneratorNet
 
 
 def get_mnist_dataset(dataset_path):
@@ -24,7 +25,7 @@ def get_mnist_data_loader(dataset_path, batch_size):
     return mnist_data_loader
 
 
-def get_latent_batch(batch_size, device):
+def get_gaussian_latent_batch(batch_size, device):
     return torch.randn((batch_size, LATENT_SPACE_DIM), device=device)
 
 
@@ -34,6 +35,12 @@ def plot_single_img_from_tensor_batch(batch):
     print(img.shape, np.min(img), np.max(img))
     plt.imshow(img)
     plt.show()
+
+
+def get_vanilla_nets(device):
+    d_net = DiscriminatorNet().train().to(device)
+    g_net = GeneratorNet().train().to(device)
+    return d_net, g_net
 
 
 def prepare_optimizers(d_net, g_net):

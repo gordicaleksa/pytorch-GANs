@@ -1,5 +1,4 @@
 import os
-import copy
 import argparse
 
 
@@ -7,8 +6,8 @@ import cv2 as cv
 import torch
 from torch import nn
 
+
 import utils.utils as utils
-from models.definitions.vanilla_gan_nets import get_vanilla_nets
 
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
@@ -18,24 +17,22 @@ from models.definitions.vanilla_gan_nets import get_vanilla_nets
 # todo: modify archs and see how it behaves
 # todo: Try 1D normalization in generator and discriminator (like in DCGAN)
 # todo: use ReLU in generator instead of leaky, compare leaky vs non-leaky ReLU
-# todo: do view inside the archs themself
-
-# todo: try changing Adams beta1 to 0.5 (like in DCGAN)
-# todo: try out SGD for discriminator net
-
 
 if __name__ == "__main__":
     #
     # fixed args - don't change these unless you have a good reason
     #
+    model_binaries_path = os.path.join(os.path.dirname(__file__), 'models', 'binaries')
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
-    mnist_path = data_dir
-    debug_path = os.path.join(os.path.dirname(__file__), 'data', 'debug_dir_dstep1_betasbrt')
+    mnist_dataset_path = data_dir
+    debug_path = os.path.join(data_dir, 'intermediate_imagery_batch')
+    os.makedirs(model_binaries_path, exist_ok=True)
     os.makedirs(debug_path, exist_ok=True)
+
+    console_log_freq = 100
 
     #
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
-    # sorted so that the ones on the top are more likely to be changed than the ones on the bottom
     #
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
@@ -48,72 +45,80 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # checking whether you have a GPU
 
     # Prepare MNIST data loader (it will download MNIST the first time you run it)
-    mnist_data_loader = utils.get_mnist_data_loader(mnist_path, batch_size)
+    mnist_data_loader = utils.get_mnist_data_loader(mnist_dataset_path, batch_size)
 
-    d_net, g_net = get_vanilla_nets(device)
-    d_opt, g_opt = utils.prepare_optimizers(d_net, g_net)
+    # Fetch feed-forward nets (placed on GPU if present) and optimizers which control their weights
+    discriminator_net, generator_net = utils.get_vanilla_nets(device)
+    discriminator_opt, generator_opt = utils.prepare_optimizers(discriminator_net, generator_net)
 
+    # 1s will configure BCELoss into -log(x) whereas 0s will configure it to -log(1-x)
+    # So that means we can effectively use binary cross-entropy loss to achieve adversarial loss!
     adversarial_loss = nn.BCELoss()
-
-    ref_noise_batch = torch.randn((5, 100), device=device)
-
-    d_losses = []
-    g_losses = []
-
     real_images_gt = torch.ones((batch_size, 1), device=device)
     fake_images_gt = torch.zeros((batch_size, 1), device=device)
 
+    # Logging purposes
+    ref_noise_batch = utils.get_gaussian_latent_batch(5, device)  # Used to track generator's quality during training
+    discriminator_loss_values = []
+    generator_loss_values = []
+
+    # GAN training loop
     for epoch in range(num_epochs):
-        for batch_idx, (real_batch, _) in enumerate(mnist_data_loader):
+        for batch_idx, (real_images, _) in enumerate(mnist_data_loader):
 
-            if batch_idx % 100 == 0:
-                print(f'Training. Epoch = {epoch} batch = {batch_idx}.')
+            if batch_idx % console_log_freq == 0:
+                print(f'Training GANs, epoch = {epoch} | batch = {batch_idx}.')
 
-            real_batch = real_batch.to(device)
-
-            #
-            # Train discriminator
-            #
-
-            d_net.zero_grad()
-
-            # Train discriminator net
-            real_predictions = d_net(real_batch)
-            real_loss = adversarial_loss(real_predictions, real_images_gt)
-
-            noise_batch = utils.get_latent_batch(batch_size, device)
-            fake_batch = g_net(noise_batch)
-            fake_predictions = d_net(fake_batch.detach())
-            fake_loss = adversarial_loss(fake_predictions, fake_images_gt)
-            d_loss = real_loss + fake_loss
-
-            d_loss.backward()
-            d_losses.append(d_loss.item())
-
-            d_opt.step()
+            real_images = real_images.to(device)  # Place imagery on GPU (if present)
 
             #
-            # Train generator net
+            # Train discriminator: maximize V = log(D(x)) + log(1-D(G(z))) or equivalently minimize -V
+            # Note: D = discriminator, x = real images, G = generator, z = latent Gaussian vectors, G(z) = fake images
             #
 
-            g_opt.zero_grad()
+            # Zero out .grad variables in discriminator network (otherwise we would have corrupt results)
+            discriminator_opt.zero_grad()
 
-            noise_batch = utils.get_latent_batch(batch_size, device)
-            generated_batch = g_net(noise_batch)
-            predictions = d_net(generated_batch)
-            g_loss = adversarial_loss(predictions, real_images_gt)
+            # -log(D(x)) <- we minimize this by making D(x)/discriminator_net(real_images) as close to 1 as possible
+            real_discriminator_loss = adversarial_loss(discriminator_net(real_images), real_images_gt)
 
-            g_loss.backward()
-            g_losses.append(g_loss.item())
+            # G(z) | G == generator_net and z == utils.get_gaussian_latent_batch(batch_size, device)
+            fake_images = generator_net(utils.get_gaussian_latent_batch(batch_size, device))
+            # D(G(z)), we call detach() so that we don't calculate gradients for the generator during backward()
+            fake_images_predictions = discriminator_net(fake_images.detach())
+            # -log(1 - D(G(z))) <- we minimize this by making D(G(z)) as close to 0 as possible
+            fake_discriminator_loss = adversarial_loss(fake_images_predictions, fake_images_gt)
 
-            g_opt.step()
+            discriminator_loss = real_discriminator_loss + fake_discriminator_loss
+            discriminator_loss.backward()  # this will populate .grad vars in the discriminator net
+            discriminator_opt.step()  # perform D weights update according to optimizer's strategy
+
+            #
+            # Train generator: minimize V1 = log(1-D(G(z))) or equivalently maximize V2 = log(D(G(z))) (or min of -V2)
+            # The original expression (V1) had problems with diminishing gradients for G when D is too good.
+            #
+
+            # Zero out .grad variables in discriminator network (otherwise we would have corrupt results)
+            generator_opt.zero_grad()
+
+            # D(G(z)) (see above for explanations)
+            generated_images_predictions = discriminator_net(generator_net(utils.get_gaussian_latent_batch(batch_size, device)))
+            # By placing real_images_gt here we minimize -log(D(G(z))) which happens when D approaches 1
+            # i.e. we're tricking D into thinking that these generated images are real!
+            generator_loss = adversarial_loss(generated_images_predictions, real_images_gt)
+
+            generator_loss.backward()  # this will populate .grad vars in the G net (also in D but we won't use those)
+            generator_opt.step()  # perform G weights update according to optimizer's strategy
+
+            generator_loss_values.append(generator_loss.item())
+            discriminator_loss_values.append(discriminator_loss.item())
 
             if batch_idx % 50 == 0:
                 with torch.no_grad():
-                    generated_batch = g_net(ref_noise_batch)
-                    generated_batch = generated_batch.view(generated_batch.shape[0], 1, 28, 28)
-                    new_real_batch = real_batch.view(real_batch.shape[0], 1, 28, 28)
-                    composed = utils.compose_imgs(generated_batch)
+                    generated_images = generator_net(ref_noise_batch)
+                    generated_images = generated_images.view(generated_images.shape[0], 1, 28, 28)
+                    new_real_batch = real_images.view(real_images.shape[0], 1, 28, 28)
+                    composed = utils.compose_imgs(generated_images)
                     real_composed = utils.compose_imgs(new_real_batch[:5])
 
                     # if epoch % 1 == 0 and cnt == 0:

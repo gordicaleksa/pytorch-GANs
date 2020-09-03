@@ -8,12 +8,6 @@ from torch import nn
 MNIST_IMG_SIZE = 28
 
 
-def get_vanilla_nets(device):
-    d_net = DiscriminatorNet().train().to(device)
-    g_net = GeneratorNet().train().to(device)
-    return d_net, g_net
-
-
 class DiscriminatorNet(torch.nn.Module):
     """
     4-layer MLP discriminative neural network
