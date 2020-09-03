@@ -54,14 +54,3 @@ def same_weights(model1, model2):
         if p1.data.ne(p2.data).sum() > 0:
             return False
     return True
-
-
-def compose_imgs(batch):
-    imgs = []
-    for img in batch:
-        img = np.moveaxis(img.to('cpu').numpy(), 0, 2)
-        print(np.min(img), np.max(img), len(np.unique(img)), np.unique(img)[:4])
-        img += 1.
-        img /= 2.
-        imgs.append(np.uint8(img * 255))
-    return np.hstack(imgs)

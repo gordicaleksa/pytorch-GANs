@@ -2,16 +2,16 @@ import os
 import argparse
 
 
-import cv2 as cv
+import numpy as np
 import torch
 from torch import nn
+from torchvision.utils import save_image
 
 
 import utils.utils as utils
 
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
-# todo: try out save_image from torchvision.utils
 # todo: force mode collapse and add settings and results to readme
 
 # todo: modify archs and see how it behaves
@@ -25,11 +25,14 @@ if __name__ == "__main__":
     model_binaries_path = os.path.join(os.path.dirname(__file__), 'models', 'binaries')
     data_dir = os.path.join(os.path.dirname(__file__), 'data')
     mnist_dataset_path = data_dir
-    debug_path = os.path.join(data_dir, 'intermediate_imagery_batch')
+    debug_path = os.path.join(data_dir, 'intermediate_imagery')
     os.makedirs(model_binaries_path, exist_ok=True)
     os.makedirs(debug_path, exist_ok=True)
 
     console_log_freq = 100
+    ref_generated_images_log_freq = 100
+    model_checkpoint_log_freq_per_epoch = 5
+    ref_batch_size = 16
 
     #
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
@@ -58,16 +61,13 @@ if __name__ == "__main__":
     fake_images_gt = torch.zeros((batch_size, 1), device=device)
 
     # Logging purposes
-    ref_noise_batch = utils.get_gaussian_latent_batch(5, device)  # Used to track generator's quality during training
+    ref_noise_batch = utils.get_gaussian_latent_batch(ref_batch_size, device)  # Track G's quality during training
     discriminator_loss_values = []
     generator_loss_values = []
 
     # GAN training loop
     for epoch in range(num_epochs):
         for batch_idx, (real_images, _) in enumerate(mnist_data_loader):
-
-            if batch_idx % console_log_freq == 0:
-                print(f'Training GANs, epoch = {epoch} | batch = {batch_idx}.')
 
             real_images = real_images.to(device)  # Place imagery on GPU (if present)
 
@@ -110,25 +110,25 @@ if __name__ == "__main__":
             generator_loss.backward()  # this will populate .grad vars in the G net (also in D but we won't use those)
             generator_opt.step()  # perform G weights update according to optimizer's strategy
 
+            #
+            # Logging and checkpoint creation
+            #
+            # todo: add checkpoint model saving
+            # todo: add tensorboard loss logging
             generator_loss_values.append(generator_loss.item())
             discriminator_loss_values.append(discriminator_loss.item())
 
-            if batch_idx % 50 == 0:
+            if batch_idx % console_log_freq == 0:
+                print(f'Training GANs, epoch = {epoch} | batch = {batch_idx}.')
+
+            #     plt.plot(real_losses, 'r', label='d real loss')  # plotting t, a separately
+            #     plt.plot(fake_losses, 'b', label='d fake loss')  # plotting t, b separately
+            #     plt.plot(losses, 'g', label='g loss')  # plotting t, c separately
+            #     plt.legend()
+            #     plt.show()
+
+            if batch_idx % ref_generated_images_log_freq == 0:
                 with torch.no_grad():
-                    generated_images = generator_net(ref_noise_batch)
-                    generated_images = generated_images.view(generated_images.shape[0], 1, 28, 28)
-                    new_real_batch = real_images.view(real_images.shape[0], 1, 28, 28)
-                    composed = utils.compose_imgs(generated_images)
-                    real_composed = utils.compose_imgs(new_real_batch[:5])
-
-                    # if epoch % 1 == 0 and cnt == 0:
-                    #     plt.imshow(np.vstack([np.repeat(real_composed, 3, axis=2), np.repeat(composed, 3, axis=2)]))
-                    #     plt.show()
-                    #
-                    #     plt.plot(real_losses, 'r', label='d real loss')  # plotting t, a separately
-                    #     plt.plot(fake_losses, 'b', label='d fake loss')  # plotting t, b separately
-                    #     plt.plot(losses, 'g', label='g loss')  # plotting t, c separately
-                    #     plt.legend()
-                    #     plt.show()
-
-                    cv.imwrite(os.path.join(debug_path, f'{epoch}_{batch_idx}.jpg'), cv.resize(composed, (0, 0), fx=5, fy=5, interpolation=cv.INTER_NEAREST))
+                    log_generated_images = generator_net(ref_noise_batch)
+                    log_generated_images_resized = nn.Upsample(scale_factor=2.5, mode='nearest')(log_generated_images)
+                    log_grid = save_image(log_generated_images_resized, os.path.join(debug_path, f'{epoch}_{batch_idx}.jpg'), nrow=int(np.sqrt(ref_batch_size)), normalize=True)
