@@ -10,13 +10,13 @@ from torchvision.utils import save_image
 
 import utils.utils as utils
 
+# todo: add checkpoint model saving
+# todo: add tensorboard loss logging
+# todo: refactor
+
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
 # todo: force mode collapse and add settings and results to readme
-
-# todo: modify archs and see how it behaves
-# todo: Try 1D normalization in generator and discriminator (like in DCGAN)
-# todo: use ReLU in generator instead of leaky, compare leaky vs non-leaky ReLU
 
 if __name__ == "__main__":
     #
@@ -113,8 +113,7 @@ if __name__ == "__main__":
             #
             # Logging and checkpoint creation
             #
-            # todo: add checkpoint model saving
-            # todo: add tensorboard loss logging
+
             generator_loss_values.append(generator_loss.item())
             discriminator_loss_values.append(discriminator_loss.item())
 

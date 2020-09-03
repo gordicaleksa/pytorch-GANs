@@ -43,6 +43,9 @@ def get_vanilla_nets(device):
     return d_net, g_net
 
 
+# Tried SGD for the discriminator, had problems tweaking it - Adam simply works nicely but default lr 1e-3 won't work!
+# I had to train discriminator more (4 to 1 schedule worked) to get it working with default lr, still got worse results.
+# 0.0002 and 0.5, 0.999 are from the DCGAN paper it works here nicely!
 def prepare_optimizers(d_net, g_net):
     d_opt = Adam(d_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
     g_opt = Adam(g_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
