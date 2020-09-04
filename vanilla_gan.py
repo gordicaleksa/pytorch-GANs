@@ -8,16 +8,15 @@ import torch
 from torch import nn
 from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
-import git
 
 
 import utils.utils as utils
 
-# todo: add README
 
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
 # todo: force mode collapse and add settings and results to readme
+# todo: add README
 
 
 def train_vanilla_gan(training_config):
@@ -42,6 +41,7 @@ def train_vanilla_gan(training_config):
     ref_noise_batch = utils.get_gaussian_latent_batch(ref_batch_size, device)  # Track G's quality during training
     discriminator_loss_values = []
     generator_loss_values = []
+    img_cnt = 0
 
     ts = time.time()  # start measuring time
 
@@ -109,16 +109,17 @@ def train_vanilla_gan(training_config):
                 with torch.no_grad():
                     log_generated_images = generator_net(ref_noise_batch)
                     log_generated_images_resized = nn.Upsample(scale_factor=2.5, mode='nearest')(log_generated_images)
-                    save_image(log_generated_images_resized, os.path.join(training_config['debug_path'], f'{epoch + 1}_{batch_idx + 1}.jpg'), nrow=int(np.sqrt(ref_batch_size)), normalize=True)
+                    save_image(log_generated_images_resized, os.path.join(training_config['debug_path'], f'{str(img_cnt).zfill(6)}.jpg'), nrow=int(np.sqrt(ref_batch_size)), normalize=True)
+                    img_cnt += 1
 
             # Save generator checkpoint
-            if training_config['checkpoint_freq'] is not None and (epoch + 1) % training_config['checkpoint_freq'] == 0:
-                training_state = {
-                    "commit_hash": git.Repo(search_parent_directories=True).head.object.hexsha,
-                    "state_dict": generator_net.state_dict()
-                }
+            if training_config['checkpoint_freq'] is not None and (epoch + 1) % training_config['checkpoint_freq'] == 0 and batch_idx == 0:
+                training_state = utils.get_training_state(generator_net)
                 ckpt_model_name = f"ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
                 torch.save(training_state, os.path.join(training_config['checkpoints_path'], ckpt_model_name))
+
+    # Save the latest generator in the binaries directory
+    torch.save(utils.get_training_state(generator_net), os.path.join(training_config['binaries_path'], 'vanilla_generator_final.pth'))
 
 
 if __name__ == "__main__":
@@ -126,7 +127,7 @@ if __name__ == "__main__":
     # fixed args - don't change these unless you have a good reason
     #
     data_dir_path = os.path.join(os.path.dirname(__file__), 'data')
-    model_binaries_path = os.path.join(os.path.dirname(__file__), 'models', 'binaries')
+    binaries_path = os.path.join(os.path.dirname(__file__), 'models', 'binaries')
     checkpoints_path = os.path.join(os.path.dirname(__file__), 'models', 'checkpoints')
     debug_path = os.path.join(data_dir_path, 'debug_imagery')
     os.makedirs(debug_path, exist_ok=True)
@@ -152,6 +153,7 @@ if __name__ == "__main__":
         training_config[arg] = getattr(args, arg)
     training_config['data_dir_path'] = data_dir_path
     training_config['checkpoints_path'] = checkpoints_path
+    training_config['binaries_path'] = binaries_path
     training_config['debug_path'] = debug_path
 
     # train GAN model

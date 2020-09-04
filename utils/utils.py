@@ -1,3 +1,9 @@
+import os
+
+
+import git
+import cv2 as cv
+import numpy as np
 import torch
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
@@ -6,6 +12,26 @@ from torch.optim import Adam
 
 from .constants import LATENT_SPACE_DIM
 from models.definitions.vanilla_gan_nets import DiscriminatorNet, GeneratorNet
+
+
+def load_image(img_path, target_shape=None):
+    if not os.path.exists(img_path):
+        raise Exception(f'Path does not exist: {img_path}')
+    img = cv.imread(img_path)[:, :, ::-1]  # [:, :, ::-1] converts BGR (opencv format...) into RGB
+
+    if target_shape is not None:  # resize section
+        if isinstance(target_shape, int) and target_shape != -1:  # scalar -> implicitly setting the width
+            current_height, current_width = img.shape[:2]
+            new_width = target_shape
+            new_height = int(current_height * (new_width / current_width))
+            img = cv.resize(img, (new_width, new_height), interpolation=cv.INTER_CUBIC)
+        else:  # set both dimensions to target shape
+            img = cv.resize(img, (target_shape[1], target_shape[0]), interpolation=cv.INTER_CUBIC)
+
+    # this need to go after resizing - otherwise cv.resize will push values outside of [0,1] range
+    img = img.astype(np.float32)  # convert from uint8 to float32
+    img /= 255.0  # get to [0, 1] range
+    return img
 
 
 def get_mnist_dataset(dataset_path):
@@ -41,6 +67,14 @@ def get_optimizers(d_net, g_net):
     d_opt = Adam(d_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
     g_opt = Adam(g_net.parameters(), lr=0.0002, betas=(0.5, 0.999))
     return d_opt, g_opt
+
+
+def get_training_state(generator_net):
+    training_state = {
+        "commit_hash": git.Repo(search_parent_directories=True).head.object.hexsha,
+        "state_dict": generator_net.state_dict()
+    }
+    return training_state
 
 
 def print_training_info_to_console(training_config):

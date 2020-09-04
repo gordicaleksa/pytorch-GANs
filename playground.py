@@ -1,5 +1,14 @@
+import os
+
+
 import torch
 from torch import nn
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+from models.definitions.vanilla_gan_nets import GeneratorNet
+import utils.utils as utils
 
 
 def understand_adversarial_loss():
@@ -58,7 +67,29 @@ def understand_adversarial_loss():
         print('')
 
 
-if __name__ == "__main__":
-    print('Uncomment the concept you want to understand.')
+def generate_new_image():
+    binaries_path = os.path.join(os.path.dirname(__file__), 'models', 'binaries')
 
-    understand_adversarial_loss()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Prepare the model - load the weights and put the model into evaluation mode
+    generator = GeneratorNet().to(device)
+    training_state = torch.load(os.path.join(binaries_path, 'vanilla_generator_final.pth'))
+    state_dict = training_state["state_dict"]
+    generator.load_state_dict(state_dict, strict=True)
+    generator.eval()
+
+    with torch.no_grad():
+        latent_vector = utils.get_gaussian_latent_batch(1, device)
+        generated_img = np.moveaxis(generator(latent_vector).to('cpu').numpy()[0], 0, 2)
+        plt.imshow(np.repeat(generated_img, 3, axis=2)); plt.show()
+        # utils.save_and_maybe_display_image(inference_config, stylized_img,
+        #                                should_display=inference_config['should_not_display'])
+
+
+if __name__ == "__main__":
+    # understand_adversarial_loss()
+
+    generate_new_image()
+
+

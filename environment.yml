@@ -13,4 +13,5 @@ dependencies:
     - opencv-python==4.2.0.32
     - GitPython==3.1.2
     - tensorboard==2.2.2
+    - imageio==2.9.0
 
