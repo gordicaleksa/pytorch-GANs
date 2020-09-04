@@ -1,24 +1,23 @@
 import torch
 from torch import nn
 
-# todo: add latent dim
-# from utils.contants import LA
 
-
-MNIST_IMG_SIZE = 28
+from utils.constants import LATENT_SPACE_DIM, MNIST_IMG_SIZE
 
 
 def vanilla_block(in_feat, out_feat, normalize=True, activation=None):
     layers = [nn.Linear(in_feat, out_feat)]
     if normalize:
         layers.append(nn.BatchNorm1d(out_feat))
+    # 0.2 was used in DCGAN, I experimented with other values like 0.5 didn't notice significant change
     layers.append(nn.LeakyReLU(0.2) if activation is None else activation)
     return layers
 
 
 class GeneratorNet(torch.nn.Module):
-    """
-    Simple 4-layer MLP generative neural network.
+    """Simple 4-layer MLP generative neural network.
+
+    By default it works for MNIST size images (28x28).
 
     There are many ways you can construct generator to work on MNIST.
     Even without normalization layers it will work ok. Even with 5 layers it will work ok, etc.
@@ -27,11 +26,13 @@ class GeneratorNet(torch.nn.Module):
 
     People tried to automate the task using IS (inception score, often used incorrectly), etc.
     but so far it always ends up with some form of visual inspection (human in the loop).
+
     """
 
-    def __init__(self):
+    def __init__(self, img_shape=(MNIST_IMG_SIZE, MNIST_IMG_SIZE)):
         super(GeneratorNet, self).__init__()
-        num_neurons_per_layer = [100, 256, 512, 1024, 784]
+        self.generated_img_shape = img_shape
+        num_neurons_per_layer = [LATENT_SPACE_DIM, 256, 512, 1024, img_shape[0] * img_shape[1]]
 
         self.net = nn.Sequential(
             *vanilla_block(num_neurons_per_layer[0], num_neurons_per_layer[1]),
@@ -42,21 +43,22 @@ class GeneratorNet(torch.nn.Module):
 
     def forward(self, x):
         x = self.net(x)
-        return x.view(x.shape[0], 1, MNIST_IMG_SIZE, MNIST_IMG_SIZE)
+        return x.view(x.shape[0], 1, *self.generated_img_shape)
 
 
 class DiscriminatorNet(torch.nn.Module):
-    """
-    Simple 3-layer MLP discriminative neural network.
+    """Simple 3-layer MLP discriminative neural network. It should output probability 1. for real images and 0. for fakes.
+
+    By default it works for MNIST size images (28x28).
 
     Again there are many ways you can construct discriminator network that would work on MNIST.
-    You could use more or less layers, etc. Using normalization as in DCGAN paper doesn't work well though.
+    You could use more or less layers, etc. Using normalization as in the DCGAN paper doesn't work well though.
+
     """
 
-    def __init__(self):
+    def __init__(self, img_shape=(MNIST_IMG_SIZE, MNIST_IMG_SIZE)):
         super().__init__()
-        # todo: make this 784 = mnist_size x mnist_size or more generic
-        num_neurons_per_layer = [784, 512, 256, 1]
+        num_neurons_per_layer = [img_shape[0] * img_shape[1], 512, 256, 1]
 
         self.net = nn.Sequential(
             *vanilla_block(num_neurons_per_layer[0], num_neurons_per_layer[1], normalize=False),

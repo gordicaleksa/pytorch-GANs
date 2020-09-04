@@ -13,9 +13,7 @@ import git
 
 import utils.utils as utils
 
-# todo: refactor
-# todo: add env file
-# todo: write info to console at the start (similar to other projects)
+# todo: add README
 
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
@@ -31,7 +29,7 @@ def train_vanilla_gan(training_config):
 
     # Fetch feed-forward nets (place them on GPU if present) and optimizers which will tweak their weights
     discriminator_net, generator_net = utils.get_vanilla_nets(device)
-    discriminator_opt, generator_opt = utils.prepare_optimizers(discriminator_net, generator_net)
+    discriminator_opt, generator_opt = utils.get_optimizers(discriminator_net, generator_net)
 
     # 1s will configure BCELoss into -log(x) whereas 0s will configure it to -log(1-x)
     # So that means we can effectively use binary cross-entropy loss to achieve adversarial loss!
@@ -48,6 +46,7 @@ def train_vanilla_gan(training_config):
     ts = time.time()  # start measuring time
 
     # GAN training loop
+    utils.print_training_info_to_console(training_config)
     for epoch in range(training_config['num_epochs']):
         for batch_idx, (real_images, _) in enumerate(mnist_data_loader):
 
@@ -137,8 +136,8 @@ if __name__ == "__main__":
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
     #
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
     parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=50)
+    parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
 
     # logging/debugging/checkpoint related (helps a lot with experimentation)
     parser.add_argument("--enable_tensorboard", type=bool, help="enable tensorboard logging (D and G loss)", default=True)
