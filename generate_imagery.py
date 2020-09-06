@@ -1,4 +1,5 @@
 import os
+import shutil
 
 
 import torch
@@ -50,6 +51,7 @@ def spherical_interpolation(t, p0, p1):
     """ Spherical interpolation (slerp) formula: https://en.wikipedia.org/wiki/Slerp
 
     Found inspiration here: https://github.com/soumith/ganhacks
+    but I didn't get any improvement using it compared to linear interpolation.
 
     Args:
         t (float): has [0, 1] range
@@ -103,7 +105,9 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
         interpolation_fn = spherical_interpolation if slerp else linear_interpolation
 
         grid_interpolated_imgs_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery')  # combine results into grid
-        decomposed_interpolated_imgs_path = os.path.join(grid_interpolated_imgs_path, f'{interpolation_name}_dump')  # dump separate results
+        decomposed_interpolated_imgs_path = os.path.join(grid_interpolated_imgs_path, f'tmp_{interpolation_name}_dump')  # dump separate results
+        if os.path.exists(decomposed_interpolated_imgs_path):
+            shutil.rmtree(decomposed_interpolated_imgs_path)
         os.makedirs(grid_interpolated_imgs_path, exist_ok=True)
         os.makedirs(decomposed_interpolated_imgs_path, exist_ok=True)
 
@@ -128,6 +132,7 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
                     print('Well lets generate a new one!')
                     continue
         else:
+            print('Skip latent vectors picking section and use cached ones.')
             latent_vector_a, latent_vector_b = [a, b]
 
         # Cache latent vectors
@@ -163,6 +168,13 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
 
 
 if __name__ == "__main__":
+    # The first time you start generation in the interpolation mode it will cache a and b
+    a_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery', 'a.npy')
+    b_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery', 'b.npy')
+    a = np.load(a_path) if os.path.exists(a_path) else None
+    b = np.load(b_path) if os.path.exists(b_path) else None
+
     model_name = r'vanilla_generator_final_best.pth'
-    generate_new_images(model_name, interpolation_mode=True, slerp=True, should_display=True)
+
+    generate_new_images(model_name, interpolation_mode=True, slerp=True, a=a, b=b, should_display=False)
 
