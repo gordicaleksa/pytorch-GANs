@@ -11,11 +11,11 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 import utils.utils as utils
+from utils.constants import *
 
 
 # todo: create a video of the debug imagery
 # todo: create fine step interpolation imagery and make a video out of those
-# todo: force mode collapse and add settings and results to readme
 # todo: add README
 
 
@@ -24,7 +24,7 @@ def train_vanilla_gan(training_config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # checking whether you have a GPU
 
     # Prepare MNIST data loader (it will download MNIST the first time you run it)
-    mnist_data_loader = utils.get_mnist_data_loader(training_config['data_dir_path'], training_config['batch_size'])
+    mnist_data_loader = utils.get_mnist_data_loader(DATA_DIR_PATH, training_config['batch_size'])
 
     # Fetch feed-forward nets (place them on GPU if present) and optimizers which will tweak their weights
     discriminator_net, generator_net = utils.get_vanilla_nets(device)
@@ -79,6 +79,9 @@ def train_vanilla_gan(training_config):
             # The original expression (V1) had problems with diminishing gradients for G when D is too good.
             #
 
+            # if you want to cause mode collapse probably the easiest way to do that would be to add "for i in range(n)"
+            # here (simply train G more frequent than D), n = 10 worked for me other values will also work - experiment.
+
             # Zero out .grad variables in discriminator network (otherwise we would have corrupt results)
             generator_opt.zero_grad()
 
@@ -116,28 +119,24 @@ def train_vanilla_gan(training_config):
             if training_config['checkpoint_freq'] is not None and (epoch + 1) % training_config['checkpoint_freq'] == 0 and batch_idx == 0:
                 training_state = utils.get_training_state(generator_net)
                 ckpt_model_name = f"ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
-                torch.save(training_state, os.path.join(training_config['checkpoints_path'], ckpt_model_name))
+                torch.save(training_state, os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
 
     # Save the latest generator in the binaries directory
-    torch.save(utils.get_training_state(generator_net), os.path.join(training_config['binaries_path'], 'vanilla_generator_final.pth'))
+    torch.save(utils.get_training_state(generator_net), os.path.join(BINARIES_PATH, 'vanilla_generator_final.pth'))
 
 
 if __name__ == "__main__":
     #
     # fixed args - don't change these unless you have a good reason
     #
-    data_dir_path = os.path.join(os.path.dirname(__file__), 'data')
-    binaries_path = os.path.join(os.path.dirname(__file__), 'models', 'binaries')
-    checkpoints_path = os.path.join(os.path.dirname(__file__), 'models', 'checkpoints')
-    debug_path = os.path.join(data_dir_path, 'debug_imagery')
+    debug_path = os.path.join(DATA_DIR_PATH, 'debug_imagery')
     os.makedirs(debug_path, exist_ok=True)
-    os.makedirs(checkpoints_path, exist_ok=True)
 
     #
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
     #
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=50)
+    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=150)
     parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
 
     # logging/debugging/checkpoint related (helps a lot with experimentation)
@@ -151,9 +150,6 @@ if __name__ == "__main__":
     training_config = dict()
     for arg in vars(args):
         training_config[arg] = getattr(args, arg)
-    training_config['data_dir_path'] = data_dir_path
-    training_config['checkpoints_path'] = checkpoints_path
-    training_config['binaries_path'] = binaries_path
     training_config['debug_path'] = debug_path
 
     # train GAN model
