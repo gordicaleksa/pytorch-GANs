@@ -13,11 +13,6 @@ from torch.utils.tensorboard import SummaryWriter
 import utils.utils as utils
 from utils.constants import *
 
-# todo: add spherical interpolation
-# todo: train mode collapse first train D and only than G
-# todo: create fine step interpolation imagery and make a video out of those
-# todo: add README
-
 
 def train_vanilla_gan(training_config):
     writer = SummaryWriter()  # (tensorboard) writer will output to ./runs/ directory by default
