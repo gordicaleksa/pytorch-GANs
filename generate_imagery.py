@@ -57,11 +57,6 @@ def generate_new_images(interpolation_mode=True, should_display=True):
     model_path = os.path.join(BINARIES_PATH, 'vanilla_generator_final.pth')
     assert os.path.exists(model_path), f'Could not find the model {model_path}. You first need to train your generator.'
 
-    generated_imgs_path = os.path.join(DATA_DIR_PATH, 'generated')
-    interpolated_imgs_path = os.path.join(DATA_DIR_PATH, 'interpolated')
-    os.makedirs(generated_imgs_path, exist_ok=True)
-    os.makedirs(interpolated_imgs_path, exist_ok=True)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Prepare the model - load the weights and put the model into evaluation mode
@@ -71,6 +66,9 @@ def generate_new_images(interpolation_mode=True, should_display=True):
 
     # Pick 2 images you like between which you'd like to linearly interpolate (by typing 'y' into console)
     if interpolation_mode:
+        interpolated_imgs_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery')
+        os.makedirs(interpolated_imgs_path, exist_ok=True)
+
         latent_vector_a, latent_vector_b = [None, None]
         found_good_vectors_flag = False
 
@@ -112,12 +110,15 @@ def generate_new_images(interpolation_mode=True, should_display=True):
 
         interpolated_block_img = torch.from_numpy(np.stack(generated_imgs))
         interpolated_block_img = nn.Upsample(scale_factor=2.5, mode='nearest')(interpolated_block_img)
-        save_image(interpolated_block_img, os.path.join(interpolated_imgs_path, f'interpolated_block.jpg'), nrow=int(np.sqrt(num_interpolated_imgs)))
+        save_image(interpolated_block_img, os.path.join(interpolated_imgs_path, utils.get_valid_file_name(interpolated_imgs_path)), nrow=int(np.sqrt(num_interpolated_imgs)))
     else:
+        generated_imgs_path = os.path.join(DATA_DIR_PATH, 'generated_imagery')
+        os.makedirs(generated_imgs_path, exist_ok=True)
+
         generated_img, _ = generate_from_random_latent_vector(generator)
         utils.save_and_maybe_display_image(generated_imgs_path, generated_img, should_display=should_display)
 
 
 if __name__ == "__main__":
-    generate_new_images(interpolation_mode=True, should_display=True)
+    generate_new_images(interpolation_mode=True, should_display=False)
 

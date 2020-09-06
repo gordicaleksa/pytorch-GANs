@@ -1,4 +1,5 @@
 import os
+import re
 
 
 import git
@@ -35,20 +36,28 @@ def load_image(img_path, target_shape=None):
     return img
 
 
+def get_valid_file_name(input_dir):
+    def valid_frame_name(str):
+        pattern = re.compile(r'[0-9]{6}\.jpg')  # regex, examples it covers: 000000.jpg or 923492.jpg, etc.
+        return re.fullmatch(pattern, str) is not None
+
+    if len(os.listdir(input_dir)) > 0:
+        candidate_frames = os.listdir(input_dir)
+        valid_frames = list(filter(valid_frame_name, candidate_frames))
+
+        # Images are saved in the <xxxxxx>.jpg format we find the biggest such <xxxxxx> number and increment by 1
+        last_img_name = sorted(valid_frames)[-1]
+        new_prefix = int(last_img_name.split('.')[0]) + 1  # increment by 1
+        return f'{str(new_prefix).zfill(6)}.jpg'
+    else:
+        return '000000.jpg'
+
+
 def save_and_maybe_display_image(dump_dir, dump_img, out_res=(256, 256), should_display=False):
     assert isinstance(dump_img, np.ndarray), f'Expected numpy array got {type(dump_img)}.'
 
-    def get_valid_name(dump_dir):
-        if len(os.listdir(dump_dir)) > 0:
-            # Images are saved in the <xxxxxx>.jpg format we find the biggest such <xxxxxx> number and increment by 1
-            newest_img_name = sorted(os.listdir(dump_dir))[-1]
-            new_prefix = int(newest_img_name.split('.')[0]) + 1  # increment by 1
-            return f'{str(new_prefix).zfill(6)}.jpg'
-        else:
-            return '000000.jpg'
-
     # step1: get next valid image name
-    dump_img_name = get_valid_name(dump_dir)
+    dump_img_name = get_valid_file_name(dump_dir)
 
     # step2: convert to uint8 format
     if dump_img.dtype != np.uint8:
