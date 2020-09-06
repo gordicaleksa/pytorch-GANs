@@ -1,5 +1,12 @@
+import os
+
+
 import torch
 from torch import nn
+
+
+from utils.video_utils import create_gif
+from utils.constants import *
 
 
 def understand_adversarial_loss():
@@ -59,7 +66,8 @@ def understand_adversarial_loss():
 
 
 if __name__ == "__main__":
-    understand_adversarial_loss()
+    # understand_adversarial_loss()
 
+    create_gif(os.path.join(DATA_DIR_PATH, 'debug_imagery'), os.path.join(DATA_DIR_PATH, 'default.gif'), downsample=10)
 
 

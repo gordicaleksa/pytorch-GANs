@@ -14,7 +14,8 @@ import utils.utils as utils
 from utils.constants import *
 
 
-# todo: create a video of the debug imagery
+# todo: train 1 more model with more layers see if it's better
+# todo: train mode collapse first train D and only than G
 # todo: create fine step interpolation imagery and make a video out of those
 # todo: add README
 
