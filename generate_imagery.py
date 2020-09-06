@@ -73,7 +73,7 @@ def spherical_interpolation(t, p0, p1):
     return np.sin((1.0 - t) * omega) / sin_omega * p0 + np.sin(t * omega) / sin_omega * p1
 
 
-def generate_new_images(model_name, a=None, b=None, interpolation_mode=True, slerp=True, should_display=True):
+def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None, b=None, should_display=True):
     """ Generate imagery using pre-trained generator (using vanilla_generator_final.pth by default)
 
     Args:
@@ -105,7 +105,7 @@ def generate_new_images(model_name, a=None, b=None, interpolation_mode=True, sle
         grid_interpolated_imgs_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery')  # combine results into grid
         decomposed_interpolated_imgs_path = os.path.join(grid_interpolated_imgs_path, f'{interpolation_name}_dump')  # dump separate results
         os.makedirs(grid_interpolated_imgs_path, exist_ok=True)
-        os.makedirs(decomposed_interpolated_imgs_path)
+        os.makedirs(decomposed_interpolated_imgs_path, exist_ok=True)
 
         latent_vector_a, latent_vector_b = [None, None]
 
@@ -130,7 +130,10 @@ def generate_new_images(model_name, a=None, b=None, interpolation_mode=True, sle
         else:
             latent_vector_a, latent_vector_b = [a, b]
 
-        np.save()
+        # Cache latent vectors
+        if a is None or b is None:
+            np.save(os.path.join(grid_interpolated_imgs_path, 'a.npy'), latent_vector_a)
+            np.save(os.path.join(grid_interpolated_imgs_path, 'b.npy'), latent_vector_b)
 
         print(f'Lets do some {interpolation_name} interpolation!')
         interpolation_resolution = 47  # number of images between the vectors a and b
