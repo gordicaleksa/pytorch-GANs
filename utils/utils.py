@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 
 
-from .constants import LATENT_SPACE_DIM
+from .constants import *
 from models.definitions.vanilla_gan_nets import DiscriminatorNet, GeneratorNet
 
 
@@ -36,15 +36,29 @@ def load_image(img_path, target_shape=None):
     return img
 
 
-def get_valid_file_name(input_dir):
+def get_available_binary_name():
+    def valid_binary_name(str):
+        pattern = re.compile(r'vanilla_generator_final_[0-9]{6}\.pth')
+        return re.fullmatch(pattern, str) is not None
+
+    prefix = 'vanilla_generator_final_'
+    valid_binary_names = list(filter(valid_binary_name, os.listdir(BINARIES_PATH)))
+    if len(valid_binary_names) > 0:
+        last_binary_name = sorted(valid_binary_names)[-1]
+        new_suffix = int(last_binary_name.split('.')[0][-6:]) + 1  # increment by 1
+        return f'{prefix}{str(new_suffix).zfill(6)}.pth'
+    else:
+        return f'{prefix}000000.pth'
+
+
+def get_available_file_name(input_dir):
     def valid_frame_name(str):
         pattern = re.compile(r'[0-9]{6}\.jpg')  # regex, examples it covers: 000000.jpg or 923492.jpg, etc.
         return re.fullmatch(pattern, str) is not None
 
-    if len(os.listdir(input_dir)) > 0:
-        candidate_frames = os.listdir(input_dir)
-        valid_frames = list(filter(valid_frame_name, candidate_frames))
-
+    candidate_frames = os.listdir(input_dir)
+    valid_frames = list(filter(valid_frame_name, candidate_frames))
+    if len(valid_frames) > 0:
         # Images are saved in the <xxxxxx>.jpg format we find the biggest such <xxxxxx> number and increment by 1
         last_img_name = sorted(valid_frames)[-1]
         new_prefix = int(last_img_name.split('.')[0]) + 1  # increment by 1
@@ -57,7 +71,7 @@ def save_and_maybe_display_image(dump_dir, dump_img, out_res=(256, 256), should_
     assert isinstance(dump_img, np.ndarray), f'Expected numpy array got {type(dump_img)}.'
 
     # step1: get next valid image name
-    dump_img_name = get_valid_file_name(dump_dir)
+    dump_img_name = get_available_file_name(dump_dir)
 
     # step2: convert to uint8 format
     if dump_img.dtype != np.uint8:
@@ -136,7 +150,7 @@ def print_training_info_to_console(training_config):
     print('')
 
     if training_config["checkpoint_freq"]:
-        print(f'Saving checkpoint models to {training_config["checkpoints_path"]} every {training_config["checkpoint_freq"]} epochs.')
+        print(f'Saving checkpoint models to {CHECKPOINTS_PATH} every {training_config["checkpoint_freq"]} epochs.')
     else:
         print(f'Checkpoint models saving disabled. Set checkpoint_freq you want to use it')
 

@@ -110,7 +110,7 @@ def generate_new_images(interpolation_mode=True, should_display=True):
 
         interpolated_block_img = torch.from_numpy(np.stack(generated_imgs))
         interpolated_block_img = nn.Upsample(scale_factor=2.5, mode='nearest')(interpolated_block_img)
-        save_image(interpolated_block_img, os.path.join(interpolated_imgs_path, utils.get_valid_file_name(interpolated_imgs_path)), nrow=int(np.sqrt(num_interpolated_imgs)))
+        save_image(interpolated_block_img, os.path.join(interpolated_imgs_path, utils.get_available_file_name(interpolated_imgs_path)), nrow=int(np.sqrt(num_interpolated_imgs)))
     else:
         generated_imgs_path = os.path.join(DATA_DIR_PATH, 'generated_imagery')
         os.makedirs(generated_imgs_path, exist_ok=True)

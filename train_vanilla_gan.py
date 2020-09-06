@@ -13,8 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 import utils.utils as utils
 from utils.constants import *
 
-
-# todo: train 1 more model with more layers see if it's better
+# todo: add spherical interpolation
 # todo: train mode collapse first train D and only than G
 # todo: create fine step interpolation imagery and make a video out of those
 # todo: add README
@@ -123,7 +122,7 @@ def train_vanilla_gan(training_config):
                 torch.save(training_state, os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
 
     # Save the latest generator in the binaries directory
-    torch.save(utils.get_training_state(generator_net), os.path.join(BINARIES_PATH, 'vanilla_generator_final.pth'))
+    torch.save(utils.get_training_state(generator_net), os.path.join(BINARIES_PATH, utils.get_available_binary_name()))
 
 
 if __name__ == "__main__":
@@ -137,7 +136,7 @@ if __name__ == "__main__":
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
     #
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=150)
+    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=1)
     parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
 
     # logging/debugging/checkpoint related (helps a lot with experimentation)
