@@ -4,6 +4,7 @@ import os
 import git
 import cv2 as cv
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
@@ -32,6 +33,34 @@ def load_image(img_path, target_shape=None):
     img = img.astype(np.float32)  # convert from uint8 to float32
     img /= 255.0  # get to [0, 1] range
     return img
+
+
+def save_and_maybe_display_image(dump_dir, dump_img, out_res=(256, 256), should_display=False):
+    assert isinstance(dump_img, np.ndarray), f'Expected numpy array got {type(dump_img)}.'
+
+    def get_valid_name(dump_dir):
+        if len(os.listdir(dump_dir)) > 0:
+            # Images are saved in the <xxxxxx>.jpg format we find the biggest such <xxxxxx> number and increment by 1
+            newest_img_name = sorted(os.listdir(dump_dir))[-1]
+            new_prefix = int(newest_img_name.split('.')[0]) + 1  # increment by 1
+            return f'{str(new_prefix).zfill(6)}.jpg'
+        else:
+            return '000000.jpg'
+
+    # step1: get next valid image name
+    dump_img_name = get_valid_name(dump_dir)
+
+    # step2: convert to uint8 format
+    if dump_img.dtype != np.uint8:
+        dump_img = (dump_img*255).astype(np.uint8)
+
+    # step3: write image to the file system
+    cv.imwrite(os.path.join(dump_dir, dump_img_name), cv.resize(dump_img[:, :, ::-1], out_res, interpolation=cv.INTER_NEAREST))  # ::-1 because opencv expects BGR (and not RGB) format...
+
+    # step4: maybe display part of the function
+    if should_display:
+        plt.imshow(dump_img)
+        plt.show()
 
 
 def get_mnist_dataset(dataset_path):
