@@ -77,11 +77,29 @@ The idea behind spherical interpolation is super easy - instead of moving over t
 <img src="data/examples/interpolated/slerp.png" width="330"/>
 </p>
 
-### Basic Usage (train and interpolation)
+### Basic Usage
+
+#### Training
+
+It's really easy to kick-off new training just run this: <br/>
+`python train_vanilla_gan.py --batch_size <number which won't break your GPU's VRAM>`
+
+The code is well commented so you can exactly understand how the training itself works. <br/>
+
+The script will:
+* Dump checkpoint *.pth models into `models/checkpoints/`
+* Dump the final *.pth model into `models/binaries/`
+* Dump intermediate generated imagery into `data/debug_imagery/`
+* Download MNIST (~100 MB) the first time you run it and place it into `data/MNIST/`
+* Dump tensorboard data into `runs/`, just run `tensorboard --logdir=runs` from your Anaconda
+
+And that's it you can track the training both visually (dumped imagery) and through G's and D's loss progress.
+
+#### Generating imagery and interpolating
 
 
 
-*Note: also make sure to check out playground.py file if you're having problems understanding adversarial loss.*
+Note: also make sure to check out **playground.py** file if you're having problems understanding adversarial loss.
 
 ### Experimenting
 
