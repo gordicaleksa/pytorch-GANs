@@ -55,19 +55,31 @@ You can see how the network is slowly learning to capture the data distribution 
 <img src="data/examples/training/training_progress.gif" />
 </p>
 
-After the generator is trained we can use it to generate all 10 digits! Looking pretty similar, right!?
+After the generator is trained we can use it to generate all 10 digits! Looks like it's coming directly from MNIST, right!?
 
 <p align="center">
 <img src="data/examples/generated/generated_composite.jpg" width="850"/>
 </p>
 
-We can also pick 2 numbers we like like (i.e. their latent vectors) and linearly or spherically interpolate between them:
+We can also pick 2 generated numbers that we like, save their latent vectors, and subsequently [linearly](https://en.wikipedia.org/wiki/Linear_interpolation) or [spherically](https://en.wikipedia.org/wiki/Slerp)<br/>
+interpolate between them to generate new images and understand how the latent space (z-space) is structured:
 
 <p align="center">
 <img src="data/examples/interpolated/interpolated_composite.jpg" width="850"/>
 </p>
 
+We can see how the number 4 is slowly morphing into 9 and then into the number 3. <br/>
+
+The idea behind spherical interpolation is super easy - instead of moving over the shortest possible path<br/>
+(line i.e. linear interpolation) from the first vector (p0) to the second (p1), you take the sphere's arc path: 
+
+<p align="center">
+<img src="data/examples/interpolated/slerp.png" width="330"/>
+</p>
+
 ### Basic Usage (train and interpolation)
+
+
 
 *Note: also make sure to check out playground.py file if you're having problems understanding adversarial loss.*
 
