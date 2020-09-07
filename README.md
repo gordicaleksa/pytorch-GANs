@@ -117,7 +117,7 @@ Make sure to change the `--model_name` param to your model's name (once you trai
 If you want to play with interpolation, just set the `--interpolation_mode` to `True`. <br/>
 And optionally set `--slerp` to true if you want to use spherical interpolation.
 
-The first time you run it in this mode the script will start generating images,
+The first time you run it in this mode the script will start generating images, <br/>
 and ask you to pick 2 images you like by entering `'y'` into the console.
 
 Finally it will start displaying interpolated imagery and dump the results to `data/interpolated_imagery`.
