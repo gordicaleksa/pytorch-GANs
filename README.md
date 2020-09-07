@@ -55,7 +55,7 @@ You can see how the network is slowly learning to capture the data distribution 
 <img src="data/examples/training/training_progress.gif" />
 </p>
 
-After the generator is trained we can use it to generate all 10 digits:
+After the generator is trained we can use it to generate all 10 digits! Looking pretty similar, right!?
 
 <p align="center">
 <img src="data/examples/generated/generated_composite.jpg" width="850"/>
@@ -63,7 +63,9 @@ After the generator is trained we can use it to generate all 10 digits:
 
 We can also pick 2 numbers we like like (i.e. their latent vectors) and linearly or spherically interpolate between them:
 
-
+<p align="center">
+<img src="data/examples/interpolated/interpolated_composite.jpg" width="850"/>
+</p>
 
 ### Basic Usage (train and interpolation)
 
