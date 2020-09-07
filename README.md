@@ -105,15 +105,30 @@ Note: also make sure to check out **playground.py** file if you're having proble
 
 #### Generating imagery and interpolating
 
+To generate a single image just run the script with defaults: <br/>
+`python generate_imagery.py`
 
+It will display and dump the generated image into `data/generated_imagery/` using checked-in generator model. <br/>
 
+Make sure to change the `--model_name` param to your model's name (once you train your own model). <br/>
 
+-----
 
-### Experimenting
+If you want to play with interpolation, just set the `--interpolation_mode` to `True`. <br/>
+And optionally set `--slerp` to true if you want to use spherical interpolation.
+
+The first time you run it in this mode the script will start generating images,
+and ask you to pick 2 images you like by entering `'y'` into the console.
+
+Finally it will start displaying interpolated imagery and dump the results to `data/interpolated_imagery`.
 
 ## Conditional GAN
 
+Work In Progress.
+
 ## DCGAN
+
+Work In Progress.
 
 ## Acknowledgements
 

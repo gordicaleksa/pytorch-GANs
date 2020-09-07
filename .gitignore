@@ -1,2 +1,12 @@
 .idea
 __pycache__
+
+runs
+
+models/binaries
+models/checkpoints
+
+data/interpolated_imagery
+data/generated_imagery
+data/debug_imagery
+data/MNIST

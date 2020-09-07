@@ -1,5 +1,6 @@
 import os
 import shutil
+import argparse
 
 
 import torch
@@ -168,13 +169,18 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'vanilla_generator_000000.pth')
+    parser.add_argument("--interpolation_mode", type=bool, help="Enable interpolation mode", default=False)
+    parser.add_argument("--slerp", type=bool, help="Should use spherical interpolation (default No)", default=False)
+    parser.add_argument("--should_display", type=bool, help="Display intermediate results", default=True)
+    args = parser.parse_args()
+
     # The first time you start generation in the interpolation mode it will cache a and b
+    # which you'll choose the first time you run the it.
     a_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery', 'a.npy')
     b_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery', 'b.npy')
     a = np.load(a_path) if os.path.exists(a_path) else None
     b = np.load(b_path) if os.path.exists(b_path) else None
 
-    model_name = r'vanilla_generator_000000.pth'
-
-    generate_new_images(model_name, interpolation_mode=True, slerp=True, a=a, b=b, should_display=False)
-
+    generate_new_images(args.model_name, interpolation_mode=args.interpolation_mode, slerp=args.slerp, a=a, b=b, should_display=args.should_display)
