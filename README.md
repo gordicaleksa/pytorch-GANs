@@ -43,7 +43,11 @@ like the usage of LeakyReLU and 1D batch normalization (it didn't even exist bac
 
 ### Examples
 
-Network was trained on data from MNIST dataset. Here are a couple of samples from the dataset:
+GAN was trained on data from MNIST dataset. Here is how the digits from the dataset look like:
+
+<p align="center">
+<img src="data/examples/mnist_samples/mnist_composite.jpg" width="850"/>
+</p>
 
 You can see how the network is slowly learning to capture the data distribution during training:
 
@@ -57,7 +61,9 @@ After the generator is trained we can use it to generate all 10 digits:
 <img src="data/examples/generated/generated_composite.jpg" width="850"/>
 </p>
 
-We can also pick 2 numbers we like like (i.e. their latent vectors) and linearly or spherically interpolated between them:
+We can also pick 2 numbers we like like (i.e. their latent vectors) and linearly or spherically interpolate between them:
+
+
 
 ### Basic Usage (train and interpolation)
 
