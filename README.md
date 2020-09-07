@@ -39,13 +39,17 @@ Follow through points 1 and 2 of [this setup](https://github.com/Petlja/PSIML/bl
 ## Vanilla GAN
 
 Vanilla GAN is my implementation of the [original GAN paper (Goodfellow et al.)](https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) with certain modifications mostly in the model architecture,
-like the usage of LeakyReLU and 1D batch normalization (it didn't even exist back then) instead of maxout activation and dropout.
+like the usage of LeakyReLU and 1D batch normalization (it didn't even exist back then) instead of the maxout activation and dropout.
 
 ### Examples
 
 Network was trained on data from MNIST dataset. Here are a couple of samples from the dataset:
 
 You can see how the network is slowly learning to capture the data distribution during training:
+
+<p align="center">
+<img src="data/examples/training/training_progress.gif" />
+</p>
 
 After the generator is trained we can use it to generate all 10 digits:
 
