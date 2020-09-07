@@ -1,5 +1,6 @@
 ## PyTorch GANs :computer: vs :computer: = :heart:
-This repo contains PyTorch implementation of various GAN architectures aimed at making it easy for beginners to start playing and learning about GANs.
+This repo contains PyTorch implementation of various GAN architectures. <br/>
+It's aimed at making it **easy for beginners** to start playing and learning about GANs.
 
 ## Table of Contents
   * [What are GANs?](#what-are-gans)
@@ -13,8 +14,8 @@ This repo contains PyTorch implementation of various GAN architectures aimed at 
 
 GANs were originally proposed by Ian Goodfellow et al. in a seminal paper called [Generative Adversarial Nets](https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf).
 
-GANs are a framework where 2 models (usually neural networks), called generator (G) and discriminator (D), play a minimax game against each other.
-The generator is trying to learn the distribution of the real data and is the network which we're usually interested in.
+GANs are a framework where 2 models (usually neural networks), called generator (G) and discriminator (D), play a **minimax game** against each other.
+The generator is trying to **learn the distribution of real data** and is the network which we're usually interested in.
 During the game the goal of the generator is to trick the discriminator into "thinking" that the data it generates is real.
 The goal of the discriminator, on the other hand, is to correctly discriminate between the generated (fake) images and real images coming from some dataset (e.g. MNIST).
 
@@ -37,9 +38,26 @@ Follow through points 1 and 2 of [this setup](https://github.com/Petlja/PSIML/bl
 
 ## Vanilla GAN
 
-Vanilla GAN is the implementation of the [original GAN paper (Goodfellow et al.)](https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) with certain modifications mostly in the model architecture.
+Vanilla GAN is my implementation of the [original GAN paper (Goodfellow et al.)](https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) with certain modifications mostly in the model architecture,
+like the usage of LeakyReLU and 1D batch normalization (it didn't even exist back then) instead of maxout activation and dropout.
 
-### Basic Usage
+### Examples
+
+Network was trained on data from MNIST dataset. Here are a couple of samples from the dataset:
+
+You can see how the network is slowly learning to capture the data distribution during training:
+
+After the generator is trained we can use it to generate all 10 digits:
+
+<p align="center">
+<img src="data/examples/generated/generated_composite.jpg" width="850"/>
+</p>
+
+We can also pick 2 numbers we like like (i.e. their latent vectors) and linearly or spherically interpolated between them:
+
+### Basic Usage (train and interpolation)
+
+*Note: also make sure to check out playground.py file if you're having problems understanding adversarial loss.*
 
 ### Experimenting
 
