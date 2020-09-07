@@ -95,11 +95,19 @@ The script will:
 
 And that's it you can track the training both visually (dumped imagery) and through G's and D's loss progress.
 
+<p align="center">
+<img src="data/examples/losses.PNG" width="700"/>
+</p>
+
+Tracking loss can be helpful but I mostly relied on visually analyzing intermediate imagery. <br/>
+
+Note: also make sure to check out **playground.py** file if you're having problems understanding adversarial loss.
+
 #### Generating imagery and interpolating
 
 
 
-Note: also make sure to check out **playground.py** file if you're having problems understanding adversarial loss.
+
 
 ### Experimenting
 
