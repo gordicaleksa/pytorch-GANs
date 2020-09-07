@@ -38,10 +38,10 @@ def load_image(img_path, target_shape=None):
 
 def get_available_binary_name():
     def valid_binary_name(str):
-        pattern = re.compile(r'vanilla_generator_final_[0-9]{6}\.pth')
+        pattern = re.compile(r'vanilla_generator_[0-9]{6}\.pth')
         return re.fullmatch(pattern, str) is not None
 
-    prefix = 'vanilla_generator_final_'
+    prefix = 'vanilla_generator_'
     valid_binary_names = list(filter(valid_binary_name, os.listdir(BINARIES_PATH)))
     if len(valid_binary_names) > 0:
         last_binary_name = sorted(valid_binary_names)[-1]

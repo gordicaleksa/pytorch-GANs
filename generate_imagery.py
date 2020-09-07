@@ -76,7 +76,7 @@ def spherical_interpolation(t, p0, p1):
 
 
 def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None, b=None, should_display=True):
-    """ Generate imagery using pre-trained generator (using vanilla_generator_final.pth by default)
+    """ Generate imagery using pre-trained generator (using vanilla_generator_000000.pth by default)
 
     Args:
         model_name (str): model name you want to use (default lookup location is BINARIES_PATH).
@@ -104,7 +104,7 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
         interpolation_name = "spherical" if slerp else "linear"
         interpolation_fn = spherical_interpolation if slerp else linear_interpolation
 
-        grid_interpolated_imgs_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery')  # combine results into grid
+        grid_interpolated_imgs_path = os.path.join(DATA_DIR_PATH, 'interpolated_imagery')  # combined results dir
         decomposed_interpolated_imgs_path = os.path.join(grid_interpolated_imgs_path, f'tmp_{interpolation_name}_dump')  # dump separate results
         if os.path.exists(decomposed_interpolated_imgs_path):
             shutil.rmtree(decomposed_interpolated_imgs_path)
@@ -132,7 +132,7 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
                     print('Well lets generate a new one!')
                     continue
         else:
-            print('Skip latent vectors picking section and use cached ones.')
+            print('Skip latent vectors selection section and use cached ones.')
             latent_vector_a, latent_vector_b = [a, b]
 
         # Cache latent vectors
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     a = np.load(a_path) if os.path.exists(a_path) else None
     b = np.load(b_path) if os.path.exists(b_path) else None
 
-    model_name = r'vanilla_generator_final_best.pth'
+    model_name = r'vanilla_generator_000000.pth'
 
     generate_new_images(model_name, interpolation_mode=True, slerp=True, a=a, b=b, should_display=False)
 
