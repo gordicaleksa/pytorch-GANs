@@ -13,7 +13,8 @@ from torch.optim import Adam
 
 
 from .constants import *
-from models.definitions.vanilla_gan_nets import DiscriminatorNet, GeneratorNet
+from models.definitions.vanilla_gan import DiscriminatorNet, GeneratorNet
+from models.definitions.conditional_gan import ConditionalDiscriminatorNet, ConditionalGeneratorNet
 
 
 def load_image(img_path, target_shape=None):
@@ -36,37 +37,6 @@ def load_image(img_path, target_shape=None):
     return img
 
 
-def get_available_binary_name():
-    def valid_binary_name(str):
-        pattern = re.compile(r'vanilla_generator_[0-9]{6}\.pth')
-        return re.fullmatch(pattern, str) is not None
-
-    prefix = 'vanilla_generator_'
-    valid_binary_names = list(filter(valid_binary_name, os.listdir(BINARIES_PATH)))
-    if len(valid_binary_names) > 0:
-        last_binary_name = sorted(valid_binary_names)[-1]
-        new_suffix = int(last_binary_name.split('.')[0][-6:]) + 1  # increment by 1
-        return f'{prefix}{str(new_suffix).zfill(6)}.pth'
-    else:
-        return f'{prefix}000000.pth'
-
-
-def get_available_file_name(input_dir):
-    def valid_frame_name(str):
-        pattern = re.compile(r'[0-9]{6}\.jpg')  # regex, examples it covers: 000000.jpg or 923492.jpg, etc.
-        return re.fullmatch(pattern, str) is not None
-
-    candidate_frames = os.listdir(input_dir)
-    valid_frames = list(filter(valid_frame_name, candidate_frames))
-    if len(valid_frames) > 0:
-        # Images are saved in the <xxxxxx>.jpg format we find the biggest such <xxxxxx> number and increment by 1
-        last_img_name = sorted(valid_frames)[-1]
-        new_prefix = int(last_img_name.split('.')[0]) + 1  # increment by 1
-        return f'{str(new_prefix).zfill(6)}.jpg'
-    else:
-        return '000000.jpg'
-
-
 def save_and_maybe_display_image(dump_dir, dump_img, out_res=(256, 256), should_display=False):
     assert isinstance(dump_img, np.ndarray), f'Expected numpy array got {type(dump_img)}.'
 
@@ -84,6 +54,38 @@ def save_and_maybe_display_image(dump_dir, dump_img, out_res=(256, 256), should_
     if should_display:
         plt.imshow(dump_img)
         plt.show()
+
+
+def get_available_file_name(input_dir):
+    def valid_frame_name(str):
+        pattern = re.compile(r'[0-9]{6}\.jpg')  # regex, examples it covers: 000000.jpg or 923492.jpg, etc.
+        return re.fullmatch(pattern, str) is not None
+
+    valid_frames = list(filter(valid_frame_name, os.listdir(input_dir)))
+    if len(valid_frames) > 0:
+        # Images are saved in the <xxxxxx>.jpg format we find the biggest such <xxxxxx> number and increment by 1
+        last_img_name = sorted(valid_frames)[-1]
+        new_prefix = int(last_img_name.split('.')[0]) + 1  # increment by 1
+        return f'{str(new_prefix).zfill(6)}.jpg'
+    else:
+        return '000000.jpg'
+
+
+def get_available_binary_name(gan_type_enum=GANType.VANILLA):
+    def valid_binary_name(binary_name):
+        # First time you see raw f-string? Don't worry the only trick is to double the brackets.
+        pattern = re.compile(rf'{gan_type_enum.name}_[0-9]{{6}}\.pth')
+        return re.fullmatch(pattern, binary_name) is not None
+
+    prefix = gan_type_enum.name
+    # Just list the existing binaries so that we don't overwrite them but write to a new one
+    valid_binary_names = list(filter(valid_binary_name, os.listdir(BINARIES_PATH)))
+    if len(valid_binary_names) > 0:
+        last_binary_name = sorted(valid_binary_names)[-1]
+        new_suffix = int(last_binary_name.split('.')[0][-6:]) + 1  # increment by 1
+        return f'{prefix}_{str(new_suffix).zfill(6)}.pth'
+    else:
+        return f'{prefix}_000000.pth'
 
 
 def get_mnist_dataset(dataset_path):
@@ -106,9 +108,18 @@ def get_gaussian_latent_batch(batch_size, device):
     return torch.randn((batch_size, LATENT_SPACE_DIM), device=device)
 
 
-def get_vanilla_nets(device):
-    d_net = DiscriminatorNet().train().to(device)
-    g_net = GeneratorNet().train().to(device)
+def get_gan(device, gan_type_name):
+    assert gan_type_name in [gan_type.name for gan_type in GANType], f'Unknown GAN type = {gan_type_name}.'
+
+    if gan_type_name == GANType.VANILLA.name:
+        d_net = DiscriminatorNet().train().to(device)
+        g_net = GeneratorNet().train().to(device)
+    elif gan_type_name == GANType.CGAN.name:
+        d_net = ConditionalDiscriminatorNet().train().to(device)
+        g_net = ConditionalGeneratorNet().train().to(device)
+    else:
+        raise Exception('GAN type not yet supported.')
+
     return d_net, g_net
 
 
@@ -121,10 +132,11 @@ def get_optimizers(d_net, g_net):
     return d_opt, g_opt
 
 
-def get_training_state(generator_net):
+def get_training_state(generator_net, gan_type_name):
     training_state = {
         "commit_hash": git.Repo(search_parent_directories=True).head.object.hexsha,
-        "state_dict": generator_net.state_dict()
+        "state_dict": generator_net.state_dict(),
+        "gan_type": gan_type_name
     }
     return training_state
 

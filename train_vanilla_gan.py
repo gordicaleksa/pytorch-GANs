@@ -22,7 +22,7 @@ def train_vanilla_gan(training_config):
     mnist_data_loader = utils.get_mnist_data_loader(DATA_DIR_PATH, training_config['batch_size'])
 
     # Fetch feed-forward nets (place them on GPU if present) and optimizers which will tweak their weights
-    discriminator_net, generator_net = utils.get_vanilla_nets(device)
+    discriminator_net, generator_net = utils.get_gan(device, GANType.VANILLA.name)
     discriminator_opt, generator_opt = utils.get_optimizers(discriminator_net, generator_net)
 
     # 1s will configure BCELoss into -log(x) whereas 0s will configure it to -log(1-x)
@@ -40,7 +40,7 @@ def train_vanilla_gan(training_config):
 
     ts = time.time()  # start measuring time
 
-    # GAN training loop
+    # GAN training loop, it's always smart to first train the discriminator so as to avoid mode collapse!
     utils.print_training_info_to_console(training_config)
     for epoch in range(training_config['num_epochs']):
         for batch_idx, (real_images, _) in enumerate(mnist_data_loader):
@@ -112,12 +112,11 @@ def train_vanilla_gan(training_config):
 
             # Save generator checkpoint
             if training_config['checkpoint_freq'] is not None and (epoch + 1) % training_config['checkpoint_freq'] == 0 and batch_idx == 0:
-                training_state = utils.get_training_state(generator_net)
                 ckpt_model_name = f"ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
-                torch.save(training_state, os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
+                torch.save(utils.get_training_state(generator_net, GANType.VANILLA.name), os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
 
     # Save the latest generator in the binaries directory
-    torch.save(utils.get_training_state(generator_net), os.path.join(BINARIES_PATH, utils.get_available_binary_name()))
+    torch.save(utils.get_training_state(generator_net, GANType.VANILLA.name), os.path.join(BINARIES_PATH, utils.get_available_binary_name()))
 
 
 if __name__ == "__main__":

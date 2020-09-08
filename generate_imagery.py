@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-from models.definitions.vanilla_gan_nets import GeneratorNet
 import utils.utils as utils
 from utils.constants import *
 
@@ -29,10 +28,17 @@ def postprocess_generated_img(generated_img_tensor):
     return generated_img
 
 
-def generate_from_random_latent_vector(generator):
+def generate_from_random_latent_vector(generator, cgan_digit=None):
     with torch.no_grad():
         latent_vector = utils.get_gaussian_latent_batch(1, next(generator.parameters()).device)
-        generated_img = postprocess_generated_img(generator(latent_vector))
+
+        if cgan_digit is None:
+            generated_img = postprocess_generated_img(generator(latent_vector))
+        else:  # condition and generate the digit specified by cgan_digit
+            ref_labels = torch.tensor([cgan_digit], dtype=torch.int64)
+            ref_labels_one_hot = torch.nn.functional.one_hot(ref_labels, MNIST_NUM_CLASSES).type(torch.FloatTensor).to(next(generator.parameters()).device)
+            generated_img = postprocess_generated_img(generator(latent_vector, ref_labels_one_hot))
+
     return generated_img, latent_vector.to('cpu').numpy()[0]
 
 
@@ -76,16 +82,17 @@ def spherical_interpolation(t, p0, p1):
     return np.sin((1.0 - t) * omega) / sin_omega * p0 + np.sin(t * omega) / sin_omega * p1
 
 
-def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None, b=None, should_display=True):
+def generate_new_images(model_name, cgan_digit=None, interpolation_mode=True, slerp=True, a=None, b=None, should_display=True):
     """ Generate imagery using pre-trained generator (using vanilla_generator_000000.pth by default)
 
     Args:
         model_name (str): model name you want to use (default lookup location is BINARIES_PATH).
-        a, b (numpy arrays): latent vectors, if set to None you'll be prompted to choose images you like,
-         and use corresponding latent vectors instead.
+        cgan_digit (int): if specified generate that exact digit.
         interpolation_mode (bool): if True interpolate between the 2 chosen latent vectors,
         and generate a spectrum of images between those 2, if False generate a single image from a random vector.
         slerp (bool): if True use spherical interpolation otherwise use linear interpolation.
+        a, b (numpy arrays): latent vectors, if set to None you'll be prompted to choose images you like,
+         and use corresponding latent vectors instead.
         should_display (bool): Display the generated images before saving them.
 
     """
@@ -95,13 +102,18 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Prepare the model - load the weights and put the model into evaluation mode
-    generator = GeneratorNet().to(device)
-    generator.load_state_dict(torch.load(model_path)["state_dict"], strict=True)
+    # Prepare the correct (vanilla, cGAN, ...) model, load the weights and put the model into evaluation mode
+    model_state = torch.load(model_path)
+    gan_type = model_state["gan_type"]
+    print(f'Found {gan_type} GAN!')
+    _, generator = utils.get_gan(device, gan_type)
+    generator.load_state_dict(model_state["state_dict"], strict=True)
     generator.eval()
 
     # Pick 2 images you like between which you'd like to interpolate (by typing 'y' into console)
     if interpolation_mode:
+        assert gan_type == GANType.VANILLA.name, f'Got {gan_type} but only VANILLA GAN is supported for the interpolation mode.'
+
         interpolation_name = "spherical" if slerp else "linear"
         interpolation_fn = spherical_interpolation if slerp else linear_interpolation
 
@@ -164,13 +176,14 @@ def generate_new_images(model_name, interpolation_mode=True, slerp=True, a=None,
         generated_imgs_path = os.path.join(DATA_DIR_PATH, 'generated_imagery')
         os.makedirs(generated_imgs_path, exist_ok=True)
 
-        generated_img, _ = generate_from_random_latent_vector(generator)
+        generated_img, _ = generate_from_random_latent_vector(generator, cgan_digit if gan_type == GANType.CGAN.name else None)
         utils.save_and_maybe_display_image(generated_imgs_path, generated_img, should_display=should_display)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'vanilla_generator_000000.pth')
+    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'VANILLA_000000.pth')
+    parser.add_argument("--cgan_digit", type=int, help="Used only for cGAN - generate specified digit", default=3)
     parser.add_argument("--interpolation_mode", type=bool, help="Enable interpolation mode", default=False)
     parser.add_argument("--slerp", type=bool, help="Should use spherical interpolation (default No)", default=False)
     parser.add_argument("--should_display", type=bool, help="Display intermediate results", default=True)
@@ -183,4 +196,11 @@ if __name__ == "__main__":
     a = np.load(a_path) if os.path.exists(a_path) else None
     b = np.load(b_path) if os.path.exists(b_path) else None
 
-    generate_new_images(args.model_name, interpolation_mode=args.interpolation_mode, slerp=args.slerp, a=a, b=b, should_display=args.should_display)
+    generate_new_images(
+        args.model_name,
+        args.cgan_digit,
+        interpolation_mode=args.interpolation_mode,
+        slerp=args.slerp,
+        a=a,
+        b=b,
+        should_display=args.should_display)
