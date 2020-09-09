@@ -6,7 +6,7 @@ import time
 import numpy as np
 import torch
 from torch import nn
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -98,6 +98,13 @@ def train_vanilla_gan(training_config):
 
             if training_config['enable_tensorboard']:
                 writer.add_scalars('losses/g-and-d', {'g': generator_loss.item(), 'd': discriminator_loss.item()}, len(mnist_data_loader) * epoch + batch_idx + 1)
+                # Save debug imagery to tensorboard also (some redundancy but it may be more beginner-friendly)
+                if training_config['debug_imagery_log_freq'] is not None and batch_idx % training_config['debug_imagery_log_freq'] == 0:
+                    with torch.no_grad():
+                        log_generated_images = generator_net(ref_noise_batch)
+                        log_generated_images_resized = nn.Upsample(scale_factor=2, mode='nearest')(log_generated_images)
+                        intermediate_imagery_grid = make_grid(log_generated_images_resized, nrow=int(np.sqrt(ref_batch_size)), normalize=True)
+                        writer.add_image('intermediate generated imagery', intermediate_imagery_grid, len(mnist_data_loader) * epoch + batch_idx + 1)
 
             if training_config['console_log_freq'] is not None and batch_idx % training_config['console_log_freq'] == 0:
                 print(f'GAN training: time elapsed= {(time.time() - ts):.2f} [s] | epoch={epoch + 1} | batch= [{batch_idx + 1}/{len(mnist_data_loader)}]')
@@ -112,7 +119,7 @@ def train_vanilla_gan(training_config):
 
             # Save generator checkpoint
             if training_config['checkpoint_freq'] is not None and (epoch + 1) % training_config['checkpoint_freq'] == 0 and batch_idx == 0:
-                ckpt_model_name = f"ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
+                ckpt_model_name = f"vanilla_ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
                 torch.save(utils.get_training_state(generator_net, GANType.VANILLA.name), os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
 
     # Save the latest generator in the binaries directory

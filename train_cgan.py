@@ -7,7 +7,7 @@ import random
 import numpy as np
 import torch
 from torch import nn
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -33,11 +33,11 @@ def train_cgan(training_config):
     fake_images_gt = torch.zeros((training_config['batch_size'], 1), device=device)
 
     # For logging purposes
-    ref_batch_size = 16
+    ref_batch_size = MNIST_NUM_CLASSES**2  # We'll create a grid 10x10 where each column is a single digit
     ref_noise_batch = utils.get_gaussian_latent_batch(ref_batch_size, device)  # Track G's quality during training
 
-    # We'll generate exactly these digits for debugging purposes
-    ref_labels = torch.tensor([random.randint(0, MNIST_NUM_CLASSES-1) for i in range(ref_batch_size)], dtype=torch.int64)
+    # We'll generate exactly this grid of 10x10 (each digit in a separate column and 10 instances) for easier debugging
+    ref_labels = torch.tensor(np.array([digit for _ in range(MNIST_NUM_CLASSES) for digit in range(MNIST_NUM_CLASSES)]), dtype=torch.int64)
     ref_labels_one_hot = torch.nn.functional.one_hot(ref_labels, MNIST_NUM_CLASSES).type(torch.FloatTensor).to(device)
 
     discriminator_loss_values = []
@@ -105,6 +105,13 @@ def train_cgan(training_config):
 
             if training_config['enable_tensorboard']:
                 writer.add_scalars('losses/g-and-d', {'g': generator_loss.item(), 'd': discriminator_loss.item()}, len(mnist_data_loader) * epoch + batch_idx + 1)
+                # Save debug imagery to tensorboard also (some redundancy but it may be more beginner-friendly)
+                if training_config['debug_imagery_log_freq'] is not None and batch_idx % training_config['debug_imagery_log_freq'] == 0:
+                    with torch.no_grad():
+                        log_generated_images = generator_net(ref_noise_batch, ref_labels_one_hot)
+                        log_generated_images_resized = nn.Upsample(scale_factor=1.5, mode='nearest')(log_generated_images)
+                        intermediate_imagery_grid = make_grid(log_generated_images_resized, nrow=int(np.sqrt(ref_batch_size)), normalize=True)
+                        writer.add_image('intermediate generated imagery', intermediate_imagery_grid, len(mnist_data_loader) * epoch + batch_idx + 1)
 
             if training_config['console_log_freq'] is not None and batch_idx % training_config['console_log_freq'] == 0:
                 print(f'GAN training: time elapsed= {(time.time() - ts):.2f} [s] | epoch={epoch + 1} | batch= [{batch_idx + 1}/{len(mnist_data_loader)}]')
@@ -113,7 +120,7 @@ def train_cgan(training_config):
             if training_config['debug_imagery_log_freq'] is not None and batch_idx % training_config['debug_imagery_log_freq'] == 0:
                 with torch.no_grad():
                     log_generated_images = generator_net(ref_noise_batch, ref_labels_one_hot)
-                    log_generated_images_resized = nn.Upsample(scale_factor=2.5, mode='nearest')(log_generated_images)
+                    log_generated_images_resized = nn.Upsample(scale_factor=1.5, mode='nearest')(log_generated_images)
                     save_image(log_generated_images_resized, os.path.join(training_config['debug_path'], f'{str(img_cnt).zfill(6)}.jpg'), nrow=int(np.sqrt(ref_batch_size)), normalize=True)
                     img_cnt += 1
 
