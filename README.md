@@ -134,14 +134,20 @@ It basically just adds conditioning vectors (one hot encoding of digit labels) t
 In addition to everything that we could do with the original GAN, here we can exactly control which digit we want to generate!
 We make it dump 10x10 grid where each column is a single digit and this is how the learning proceeds:
 
+<p align="center">
+<img src="data/examples/training/training_progress_cgan.gif" />
+</p>
+
 ### Usage
 
 For training just check out [vanilla GAN](#training) (just make sure to use `train_cgan.py` instead).
 
 #### Generating imagery
 
-Same as for vanilla GAN but you can additionally set `cgan_digit` to a number between 0 and 9 to generate that exact digit!
-There is no interpolation support for cGAN as it's more of a proof of concept so feel free to use vanilla GAN for that.
+Same as for [vanilla GAN](#generating-imagery-and-interpolating) but you can additionally set `cgan_digit` to a number between 0 and 9 to generate that exact digit!
+There is no interpolation support for cGAN, it's the same as for vanilla GAN feel free to use that.
+
+Note: make sure to set `--model_name` to either `CGAN_000000.pth` (pre-trained and checked-in) or your own model.
 
 ## DCGAN
 
