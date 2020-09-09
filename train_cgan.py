@@ -1,7 +1,16 @@
+"""
+    The main difference between training vanilla GAN and training cGAN is that we are additionally
+    adding this conditioning vector y to discriminators and generators inputs (by just concatenating it to old input).
+
+    y is one hot vector meaning if we want to condition the generator to:
+        generate 0 -> we add [1., 0., ..., 0.] (10 elements)
+        generate 1 -> we add [0., 1., 0., ..., 0.] (10 elements)
+        ...
+"""
+
 import os
 import argparse
 import time
-import random
 
 
 import numpy as np
@@ -46,30 +55,33 @@ def train_cgan(training_config):
 
     ts = time.time()  # start measuring time
 
-    # GAN training loop
+    # cGAN training loop
     utils.print_training_info_to_console(training_config)
     for epoch in range(training_config['num_epochs']):
         for batch_idx, (real_images, labels) in enumerate(mnist_data_loader):
 
+            # Labels [0-9], converted to one hot encoding, are used for conditioning. Basically a fancy word for
+            # if we give you e.g. [1., 0., ..., 0.] we expect a digit from class 0.
+            # I found that using real labels for training both G and D works nice. No need for random labels.
             labels_one_hot = torch.nn.functional.one_hot(labels, MNIST_NUM_CLASSES).type(torch.FloatTensor).to(device)
             real_images = real_images.to(device)  # Place imagery on GPU (if present)
 
             #
-            # Train discriminator: maximize V = log(D(x)) + log(1-D(G(z))) or equivalently minimize -V
-            # Note: D = discriminator, x = real images, G = generator, z = latent Gaussian vectors, G(z) = fake images
+            # Train discriminator: maximize V = log(D(x|y)) + log(1-D(G(z|y))) or equivalently minimize -V
+            # Note: D-discriminator, x-real images, G-generator, z-latent vectors, G(z)-fake images, y-conditioning
             #
 
             # Zero out .grad variables in discriminator network (otherwise we would have corrupt results)
             discriminator_opt.zero_grad()
 
-            # -log(D(x)) <- we minimize this by making D(x)/discriminator_net(real_images) as close to 1 as possible
+            # -log(D(x|y)) <- we minimize this by making D(x|y) as close to 1 as possible
             real_discriminator_loss = adversarial_loss(discriminator_net(real_images, labels_one_hot), real_images_gt)
 
-            # G(z) | G == generator_net and z == utils.get_gaussian_latent_batch(batch_size, device)
+            # G(z|y) | G ~ generator_net and z ~ utils.get_gaussian_latent_batch(batch_size, device), y ~ conditioning
             fake_images = generator_net(utils.get_gaussian_latent_batch(training_config['batch_size'], device), labels_one_hot)
-            # D(G(z)), we call detach() so that we don't calculate gradients for the generator during backward()
+            # D(G(z|y)), we call detach() so that we don't calculate gradients for the generator during backward()
             fake_images_predictions = discriminator_net(fake_images.detach(), labels_one_hot)
-            # -log(1 - D(G(z))) <- we minimize this by making D(G(z)) as close to 0 as possible
+            # -log(1 - D(G(z|y))) <- we minimize this by making D(G(z|y)) as close to 0 as possible
             fake_discriminator_loss = adversarial_loss(fake_images_predictions, fake_images_gt)
 
             discriminator_loss = real_discriminator_loss + fake_discriminator_loss
@@ -77,7 +89,7 @@ def train_cgan(training_config):
             discriminator_opt.step()  # perform D weights update according to optimizer's strategy
 
             #
-            # Train generator: minimize V1 = log(1-D(G(z))) or equivalently maximize V2 = log(D(G(z))) (or min of -V2)
+            # Train G: minimize V1 = log(1-D(G(z|y))) or equivalently maximize V2 = log(D(G(z|y))) (or min of -V2)
             # The original expression (V1) had problems with diminishing gradients for G when D is too good.
             #
 
@@ -87,9 +99,9 @@ def train_cgan(training_config):
             # Zero out .grad variables in discriminator network (otherwise we would have corrupt results)
             generator_opt.zero_grad()
 
-            # D(G(z)) (see above for explanations)
+            # D(G(z|y)) (see above for explanations)
             generated_images_predictions = discriminator_net(generator_net(utils.get_gaussian_latent_batch(training_config['batch_size'], device), labels_one_hot), labels_one_hot)
-            # By placing real_images_gt here we minimize -log(D(G(z))) which happens when D approaches 1
+            # By placing real_images_gt here we minimize -log(D(G(z|y))) which happens when D approaches 1
             # i.e. we're tricking D into thinking that these generated images are real!
             generator_loss = adversarial_loss(generated_images_predictions, real_images_gt)
 
@@ -144,7 +156,7 @@ if __name__ == "__main__":
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
     #
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=50)
+    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=100)
     parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
 
     # logging/debugging/checkpoint related (helps a lot with experimentation)

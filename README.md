@@ -77,7 +77,7 @@ The idea behind spherical interpolation is super easy - instead of moving over t
 <img src="data/examples/interpolated/slerp.png" width="330"/>
 </p>
 
-### Basic Usage
+### Usage
 
 #### Training
 
@@ -96,12 +96,14 @@ The script will:
 And that's it you can track the training both visually (dumped imagery) and through G's and D's loss progress.
 
 <p align="center">
-<img src="data/examples/losses.PNG" width="700"/>
+<img src="data/examples/intermediate_imagery.PNG" height="250"/>
+<img src="data/examples/losses.PNG" height="250"/>
 </p>
 
 Tracking loss can be helpful but I mostly relied on visually analyzing intermediate imagery. <br/>
 
-Note: also make sure to check out **playground.py** file if you're having problems understanding adversarial loss.
+Note1: also make sure to check out **playground.py** file if you're having problems understanding adversarial loss.<br/>
+Note2: Images are dumped both to the file system `data/debug_imagery/` but also to tensorboard.
 
 #### Generating imagery and interpolating
 
@@ -124,7 +126,22 @@ Finally it will start displaying interpolated imagery and dump the results to `d
 
 ## Conditional GAN
 
-Work In Progress.
+Conditional GAN (cGAN) is my implementation of the [cGAN paper (Mehdi et al.)](https://arxiv.org/pdf/1411.1784.pdf).<br/>
+It basically just adds conditioning vectors (one hot encoding of digit labels) to the vanilla GAN above.
+
+### Examples
+
+In addition to everything that we could do with the original GAN, here we can exactly control which digit we want to generate!
+We make it dump 10x10 grid where each column is a single digit and this is how the learning proceeds:
+
+### Usage
+
+For training just check out [vanilla GAN](#training) (just make sure to use `train_cgan.py` instead).
+
+#### Generating imagery
+
+Same as for vanilla GAN but you can additionally set `cgan_digit` to a number between 0 and 9 to generate that exact digit!
+There is no interpolation support for cGAN as it's more of a proof of concept so feel free to use vanilla GAN for that.
 
 ## DCGAN
 
