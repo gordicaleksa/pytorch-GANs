@@ -12,15 +12,7 @@ from torch import nn
 
 
 from utils.constants import LATENT_SPACE_DIM, MNIST_IMG_SIZE, MNIST_NUM_CLASSES
-
-
-def vanilla_block(in_feat, out_feat, normalize=True, activation=None):
-    layers = [nn.Linear(in_feat, out_feat)]
-    if normalize:
-        layers.append(nn.BatchNorm1d(out_feat))
-    # 0.2 was used in DCGAN, I experimented with other values like 0.5 didn't notice significant change
-    layers.append(nn.LeakyReLU(0.2) if activation is None else activation)
-    return layers
+from .vanilla_gan import vanilla_block
 
 
 class ConditionalGeneratorNet(torch.nn.Module):
