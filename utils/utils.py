@@ -1,5 +1,6 @@
 import os
 import re
+import zipfile
 
 
 import git
@@ -8,13 +9,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from torchvision import transforms, datasets
+from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch.hub import download_url_to_file
 
 
 from .constants import *
 from models.definitions.vanilla_gan import DiscriminatorNet, GeneratorNet
 from models.definitions.conditional_gan import ConditionalDiscriminatorNet, ConditionalGeneratorNet
+from models.definitions.dcgan import ConvolutionalDiscriminativeNet, ConvolutionalGenerativeNet
 
 
 def load_image(img_path, target_shape=None):
@@ -88,20 +92,61 @@ def get_available_binary_name(gan_type_enum=GANType.VANILLA):
         return f'{prefix}_000000.pth'
 
 
-def get_mnist_dataset(dataset_path):
+def get_gan_data_transform():
     # It's good to normalize the images to [-1, 1] range https://github.com/soumith/ganhacks
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((.5,), (.5,))
     ])
+    return transform
+
+
+def get_mnist_dataset():
     # This will download the MNIST the first time it is called
-    return datasets.MNIST(root=dataset_path, train=True, download=True, transform=transform)
+    return datasets.MNIST(root=DATA_DIR_PATH, train=True, download=True, transform=get_gan_data_transform())
 
 
-def get_mnist_data_loader(dataset_path, batch_size):
-    mnist_dataset = get_mnist_dataset(dataset_path)
+def get_mnist_data_loader(batch_size):
+    mnist_dataset = get_mnist_dataset()
     mnist_data_loader = DataLoader(mnist_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     return mnist_data_loader
+
+
+def download_and_prepare_celeba(celeba_path):
+    celeba_url = r'https://s3.amazonaws.com/video.udacity-data.com/topher/2018/November/5be7eb6f_processed-celeba-small/processed-celeba-small.zip'
+
+    # Step1: Download the resource to local filesystem
+    print('*' * 50)
+    print(f'Downloading {celeba_url}.')
+    print('This may take a while the first time, the zip file has 240 MBs.')
+    print('*' * 50)
+
+    resource_tmp_path = celeba_path + '.zip'
+    download_url_to_file(celeba_url, resource_tmp_path)
+
+    # Step2: Unzip the resource
+    print(f'Started unzipping. Go and take a cup of coffe.')
+    with zipfile.ZipFile(resource_tmp_path) as zf:
+        os.makedirs(celeba_path, exist_ok=True)
+        zf.extractall(path=celeba_path)
+    print(f'Unzipping to: {celeba_path} finished.')
+
+    # Step3: Remove the temporary resource file
+    os.remove(resource_tmp_path)
+    print(f'Removing tmp file {resource_tmp_path}.')
+
+    # Step4: Prepare the dataset into a suitable format for PyTorch's ImageFolder
+    # todo: prepare for ImageFolder
+
+
+def get_celeba_data_loader(batch_size):
+    celeba_path = os.path.join(DATA_DIR_PATH, 'CelebA')
+    if not os.path.exists(celeba_path):  # We'll have to do this only 1 time, I promise.
+        download_and_prepare_celeba(celeba_path)
+
+    celeba_dataset = ImageFolder(celeba_path, transform=get_gan_data_transform())
+    celeba_data_loader = DataLoader(celeba_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    return celeba_data_loader
 
 
 def get_gaussian_latent_batch(batch_size, device):
@@ -117,8 +162,11 @@ def get_gan(device, gan_type_name):
     elif gan_type_name == GANType.CGAN.name:
         d_net = ConditionalDiscriminatorNet().train().to(device)
         g_net = ConditionalGeneratorNet().train().to(device)
+    elif gan_type_name == GANType.DCGAN.name:
+        d_net = ConvolutionalDiscriminativeNet().train().to(device)
+        g_net = ConvolutionalGenerativeNet().train().to(device)
     else:
-        raise Exception('GAN type not yet supported.')
+        raise Exception(f'GAN type {gan_type_name} not yet supported.')
 
     return d_net, g_net
 

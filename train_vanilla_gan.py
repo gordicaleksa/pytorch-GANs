@@ -19,7 +19,7 @@ def train_vanilla_gan(training_config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # checking whether you have a GPU
 
     # Prepare MNIST data loader (it will download MNIST the first time you run it)
-    mnist_data_loader = utils.get_mnist_data_loader(DATA_DIR_PATH, training_config['batch_size'])
+    mnist_data_loader = utils.get_mnist_data_loader(training_config['batch_size'])
 
     # Fetch feed-forward nets (place them on GPU if present) and optimizers which will tweak their weights
     discriminator_net, generator_net = utils.get_gan(device, GANType.VANILLA.name)
@@ -107,7 +107,7 @@ def train_vanilla_gan(training_config):
                         writer.add_image('intermediate generated imagery', intermediate_imagery_grid, len(mnist_data_loader) * epoch + batch_idx + 1)
 
             if training_config['console_log_freq'] is not None and batch_idx % training_config['console_log_freq'] == 0:
-                print(f'GAN training: time elapsed= {(time.time() - ts):.2f} [s] | epoch={epoch + 1} | batch= [{batch_idx + 1}/{len(mnist_data_loader)}]')
+                print(f'GAN training: time elapsed = {(time.time() - ts):.2f} [s] | epoch={epoch + 1} | batch= [{batch_idx + 1}/{len(mnist_data_loader)}]')
 
             # Save intermediate generator images (more convenient like this than through tensorboard)
             if training_config['debug_imagery_log_freq'] is not None and batch_idx % training_config['debug_imagery_log_freq'] == 0:
