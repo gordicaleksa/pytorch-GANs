@@ -185,11 +185,12 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
             utils.save_and_maybe_display_image(decomposed_interpolated_imgs_path, generated_img, should_display=should_display)
 
             # Move from channel last to channel first (CHW->HWC), PyTorch's save_image function expects BCHW format
-            generated_imgs.append(np.moveaxis(generated_img, 2, 0))
+            generated_imgs.append(torch.tensor(np.moveaxis(generated_img, 2, 0)))
 
-        interpolated_block_img = torch.from_numpy(np.stack(generated_imgs))
+        interpolated_block_img = torch.stack(generated_imgs)
         interpolated_block_img = nn.Upsample(scale_factor=2.5, mode='nearest')(interpolated_block_img)
         save_image(interpolated_block_img, os.path.join(grid_interpolated_imgs_path, utils.get_available_file_name(grid_interpolated_imgs_path)), nrow=int(np.sqrt(num_interpolated_imgs)))
+
     elif generation_mode == GenerationMode.VECTOR_ARITHMETIC:
         assert gan_type == GANType.DCGAN.name, f'Got {gan_type} but only DCGAN is supported for arithmetic mode.'
 
@@ -197,13 +198,13 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
         num_options = 100
         generated_imgs = []
         latent_vectors = []
+        padding = 2
         for i in range(num_options):
             generated_img, latent_vector = generate_from_random_latent_vector(generator)
             generated_imgs.append(torch.tensor(np.moveaxis(generated_img, 2, 0)))  # make_grid expects CHW format
             latent_vectors.append(latent_vector)
         stacked_tensor_imgs = torch.stack(generated_imgs)
-        padding = 2
-        final_tensor_img = make_grid(stacked_tensor_imgs, nrow=10, padding=padding)
+        final_tensor_img = make_grid(stacked_tensor_imgs, nrow=int(np.sqrt(num_options)), padding=padding)
         display_img = np.moveaxis(final_tensor_img.numpy(), 0, 2)
 
         # For storing latent vectors
@@ -212,12 +213,12 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
         neutral_woman_latent_vectors = []
         neutral_man_latent_vectors = []
 
-        # Make it easy, clicking on the plot you pick the image
+        # Make it easy - by clicking on the plot you pick the image.
         def onclick(event):
             if event.dblclick:
                 pass
-            else:  # Single click
-                if event.button == 1:  # Left click
+            else:  # single click
+                if event.button == 1:  # left click
                     x_coord = event.xdata
                     y_coord = event.ydata
                     column = int(x_coord / (64 + padding))  # 2 for padding induced by make_grid
@@ -236,14 +237,33 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
                     else:
                         plt.close()
 
+        plt.figure(figsize=(10, 10))
         plt.imshow(display_img)
-        plt.title('Click 3 happy women, 3 neutral women and 3 neutral men images (order matters!).')
+        plt.title('Click 3 happy women, 3 neutral women and \n 3 neutral men images (order matters!).')
         cid = plt.gcf().canvas.mpl_connect('button_press_event', onclick)
         plt.show()
         plt.gcf().canvas.mpl_disconnect(cid)
-
         print('Done choosing images.')
 
+        happy_woman_avg_latent_vector = np.mean(np.array(happy_woman_latent_vectors), axis=0)
+        neutral_woman_avg_latent_vector = np.mean(np.array(neutral_woman_latent_vectors), axis=0)
+        neutral_man_avg_latent_vector = np.mean(np.array(neutral_man_latent_vectors), axis=0)
+
+        happy_woman_latent_vectors.append(happy_woman_avg_latent_vector)
+        neutral_woman_latent_vectors.append(neutral_woman_avg_latent_vector)
+        neutral_man_latent_vectors.append(neutral_man_avg_latent_vector)
+
+        happy_women = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in happy_woman_latent_vectors])
+        neutral_women = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in neutral_woman_latent_vectors])
+        neutral_men = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in neutral_man_latent_vectors])
+
+        happy_man_latent_vector = happy_woman_avg_latent_vector - neutral_woman_avg_latent_vector + neutral_man_avg_latent_vector
+        happy_man = generate_from_specified_numpy_latent_vector(generator, happy_man_latent_vector)
+        happy_man = np.hstack([np.zeros_like(happy_man), happy_man, np.zeros_like(happy_man), np.zeros_like(happy_man)])
+
+        plt.imshow(np.vstack([happy_women, neutral_women, neutral_men, happy_man]))
+        plt.title('your picks and results.')
+        plt.show()
 
     else:
         raise Exception(f'Generation mode not yet supported.')
@@ -253,7 +273,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'DCGAN_000000.pth')
     parser.add_argument("--cgan_digit", type=int, help="Used only for cGAN - generate specified digit", default=3)
-    parser.add_argument("--generation_mode", type=bool, help="Pick between 3 generation modes", default=GenerationMode.SINGLE_IMAGE)
+    parser.add_argument("--generation_mode", type=bool, help="Pick between 3 generation modes", default=GenerationMode.VECTOR_ARITHMETIC)
     parser.add_argument("--slerp", type=bool, help="Should use spherical interpolation (default No)", default=False)
     parser.add_argument("--should_display", type=bool, help="Display intermediate results", default=True)
     args = parser.parse_args()
