@@ -1,3 +1,13 @@
+"""
+    Literally nothing changed in the training loop of DCGAN compared to vanilla GAN:
+
+    Things that changed:
+        * Model architecture - using CNNs compared to fully connected networks
+        * We're now using CelebA dataset loaded via utils.get_celeba_data_loader (MNIST would work, it's just too easy)
+        * Logging parameters and number of epochs (as we have bigger images)
+
+"""
+
 import os
 import argparse
 import time
@@ -22,7 +32,7 @@ def train_dcgan(training_config):
     celeba_data_loader = utils.get_celeba_data_loader(training_config['batch_size'])
 
     # Fetch convolutional nets (place them on GPU if present) and optimizers which will tweak their weights
-    discriminator_net, generator_net = utils.get_gan(device, GANType.VANILLA.name)
+    discriminator_net, generator_net = utils.get_gan(device, GANType.DCGAN.name)
     discriminator_opt, generator_opt = utils.get_optimizers(discriminator_net, generator_net)
 
     # 1s will configure BCELoss into -log(x) whereas 0s will configure it to -log(1-x)
@@ -32,7 +42,7 @@ def train_dcgan(training_config):
     fake_images_gt = torch.zeros((training_config['batch_size'], 1), device=device)
 
     # For logging purposes
-    ref_batch_size = 16
+    ref_batch_size = 25
     ref_noise_batch = utils.get_gaussian_latent_batch(ref_batch_size, device)  # Track G's quality during training
     discriminator_loss_values = []
     generator_loss_values = []
@@ -113,17 +123,17 @@ def train_dcgan(training_config):
             if training_config['debug_imagery_log_freq'] is not None and batch_idx % training_config['debug_imagery_log_freq'] == 0:
                 with torch.no_grad():
                     log_generated_images = generator_net(ref_noise_batch)
-                    log_generated_images_resized = nn.Upsample(scale_factor=2.5, mode='nearest')(log_generated_images)
+                    log_generated_images_resized = nn.Upsample(scale_factor=2, mode='nearest')(log_generated_images)
                     save_image(log_generated_images_resized, os.path.join(training_config['debug_path'], f'{str(img_cnt).zfill(6)}.jpg'), nrow=int(np.sqrt(ref_batch_size)), normalize=True)
                     img_cnt += 1
 
             # Save generator checkpoint
             if training_config['checkpoint_freq'] is not None and (epoch + 1) % training_config['checkpoint_freq'] == 0 and batch_idx == 0:
-                ckpt_model_name = f"vanilla_ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
-                torch.save(utils.get_training_state(generator_net, GANType.VANILLA.name), os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
+                ckpt_model_name = f"dcgan_ckpt_epoch_{epoch + 1}_batch_{batch_idx + 1}.pth"
+                torch.save(utils.get_training_state(generator_net, GANType.DCGAN.name), os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
 
     # Save the latest generator in the binaries directory
-    torch.save(utils.get_training_state(generator_net, GANType.VANILLA.name), os.path.join(BINARIES_PATH, utils.get_available_binary_name()))
+    torch.save(utils.get_training_state(generator_net, GANType.DCGAN.name), os.path.join(BINARIES_PATH, utils.get_available_binary_name()))
 
 
 if __name__ == "__main__":
@@ -137,14 +147,14 @@ if __name__ == "__main__":
     # modifiable args - feel free to play with these (only small subset is exposed by design to avoid cluttering)
     #
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=100)
+    parser.add_argument("--num_epochs", type=int, help="height of content and style images", default=50)
     parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
 
     # logging/debugging/checkpoint related (helps a lot with experimentation)
-    parser.add_argument("--enable_tensorboard", type=bool, help="enable tensorboard logging (D and G loss)", default=True)
-    parser.add_argument("--debug_imagery_log_freq", type=int, help="log generator images during training (batch) freq", default=100)
-    parser.add_argument("--console_log_freq", type=int, help="log to output console (batch) freq", default=100)
-    parser.add_argument("--checkpoint_freq", type=int, help="checkpoint model saving (epoch) freq", default=5)
+    parser.add_argument("--enable_tensorboard", type=bool, help="enable tensorboard logging (D and G loss)", default=False)
+    parser.add_argument("--debug_imagery_log_freq", type=int, help="log generator images during training (batch) freq", default=20)
+    parser.add_argument("--console_log_freq", type=int, help="log to output console (batch) freq", default=20)
+    parser.add_argument("--checkpoint_freq", type=int, help="checkpoint model saving (epoch) freq", default=2)
     args = parser.parse_args()
 
     # Wrapping training configuration into a dictionary

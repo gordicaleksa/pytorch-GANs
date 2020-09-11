@@ -1,6 +1,7 @@
 import os
 import re
 import zipfile
+import shutil
 
 
 import git
@@ -136,7 +137,22 @@ def download_and_prepare_celeba(celeba_path):
     print(f'Removing tmp file {resource_tmp_path}.')
 
     # Step4: Prepare the dataset into a suitable format for PyTorch's ImageFolder
-    # todo: prepare for ImageFolder
+    # I don't have any control over this zip so it's got bunch of junk that needs to be cleaned up.
+    # I am also assuming that the directory structure will remain like this.
+    shutil.rmtree(os.path.join(celeba_path, '__MACOSX'))
+    dst_data_directory = os.path.join(celeba_path, 'processed_celeba_small')
+    os.remove(os.path.join(dst_data_directory, '.DS_Store'))
+    data_directory1 = os.path.join(dst_data_directory, 'celeba')
+    data_directory2 = os.path.join(data_directory1, 'New Folder With Items')
+    for element in os.listdir(data_directory1):
+        if os.path.isfile(os.path.join(data_directory1, element)) and element.endswith('.jpg'):
+            shutil.move(os.path.join(data_directory1, element), os.path.join(dst_data_directory, element))
+
+    for element in os.listdir(data_directory2):
+        if os.path.isfile(os.path.join(data_directory2, element)) and element.endswith('.jpg'):
+            shutil.move(os.path.join(data_directory2, element), os.path.join(dst_data_directory, element))
+
+    shutil.rmtree(data_directory1)
 
 
 def get_celeba_data_loader(batch_size):
