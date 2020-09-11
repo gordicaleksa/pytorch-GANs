@@ -8,9 +8,12 @@
         Small modification I did compared to the original paper is used kernel size = 4 as I can't get 64x64
         output spatial dimension with 5 no matter the padding setting. I noticed others did the same thing.
 
+        Also I'm not doing 0-centered normal weight initialization - it actually gives far worse results.
+        Batch normalization, in general, reduced the need for smart initialization but it obviously still matters.
+
 """
 
-
+import torch
 from torch import nn
 import numpy as np
 
@@ -18,13 +21,11 @@ import numpy as np
 from utils.constants import LATENT_SPACE_DIM
 
 
-# todo: try bias False and True
-# todo: try batch norm before and after
-# todo: try with/without weight initialization as originally proposed in the paper
-
-
 def dcgan_upsample_block(in_channels, out_channels, normalize=True, activation=None):
+    # Bias set to True gives unnatural color casts
     layers = [nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=4, stride=2, padding=1, bias=False)]
+    # There were debates to whether BatchNorm should go before or after the activation function, in my experiments it
+    # did not matter. Goodfellow also had a talk where he mentioned that it should not matter.
     if normalize:
         layers.append(nn.BatchNorm2d(out_channels))
     layers.append(nn.ReLU() if activation is None else activation)
@@ -86,4 +87,19 @@ class ConvolutionalDiscriminativeNet(nn.Module):
 
     def forward(self, img_batch):
         return self.net(img_batch)
+
+
+# Hurts the peformance in all my experiments, leaving it here as a proof that I tried it and it didn't give good results
+# Batch normalization in general reduces the need for smart initialization - that's one of it's main advantages.
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    print(classname)
+    if classname.find("Conv2d") != -1:
+        torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find("BatchNorm2d") != -1:
+        # It wouldn't make sense to make this 0-centered normal distribution as it would clamp the outputs to 0
+        # that's why it's 1-centered normal distribution with std dev of 0.02 as specified in the paper
+        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
+        torch.nn.init.constant_(m.bias.data, 0.0)
+
 
