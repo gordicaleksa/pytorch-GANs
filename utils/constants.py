@@ -1,3 +1,7 @@
+"""
+    Contains constants shared across the project.
+"""
+
 import os
 import enum
 
@@ -20,4 +24,3 @@ class GANType(enum.Enum):
     VANILLA = 0,
     CGAN = 1,
     DCGAN = 2
-

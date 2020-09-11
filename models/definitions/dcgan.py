@@ -41,6 +41,7 @@ class ConvolutionalGenerativeNet(nn.Module):
         num_channels_per_layer = [1024, 512, 256, 128, 3]
         self.init_volume_shape = (num_channels_per_layer[0], 4, 4)
 
+        # Both with and without bias gave similar results
         self.linear = nn.Linear(LATENT_SPACE_DIM, num_channels_per_layer[0] * np.prod(self.init_volume_shape[1:]))
 
         self.net = nn.Sequential(
