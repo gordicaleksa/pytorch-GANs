@@ -5,7 +5,7 @@ import argparse
 
 import torch
 from torch import nn
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -120,6 +120,7 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
     generator.load_state_dict(model_state["state_dict"], strict=True)
     generator.eval()
 
+    # Generate a single image, save it and potentially display it
     if generation_mode == GenerationMode.SINGLE_IMAGE:
         generated_imgs_path = os.path.join(DATA_DIR_PATH, 'generated_imagery')
         os.makedirs(generated_imgs_path, exist_ok=True)
@@ -191,14 +192,66 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
         save_image(interpolated_block_img, os.path.join(grid_interpolated_imgs_path, utils.get_available_file_name(grid_interpolated_imgs_path)), nrow=int(np.sqrt(num_interpolated_imgs)))
     elif generation_mode == GenerationMode.VECTOR_ARITHMETIC:
         assert gan_type == GANType.DCGAN.name, f'Got {gan_type} but only DCGAN is supported for arithmetic mode.'
-        print('todo')
+
+        # Generate num_options face images and create a grid image from them
+        num_options = 100
+        generated_imgs = []
+        latent_vectors = []
+        for i in range(num_options):
+            generated_img, latent_vector = generate_from_random_latent_vector(generator)
+            generated_imgs.append(torch.tensor(np.moveaxis(generated_img, 2, 0)))  # make_grid expects CHW format
+            latent_vectors.append(latent_vector)
+        stacked_tensor_imgs = torch.stack(generated_imgs)
+        padding = 2
+        final_tensor_img = make_grid(stacked_tensor_imgs, nrow=10, padding=padding)
+        display_img = np.moveaxis(final_tensor_img.numpy(), 0, 2)
+
+        # For storing latent vectors
+        num_of_vectors_per_category = 3
+        happy_woman_latent_vectors = []
+        neutral_woman_latent_vectors = []
+        neutral_man_latent_vectors = []
+
+        # Make it easy, clicking on the plot you pick the image
+        def onclick(event):
+            if event.dblclick:
+                pass
+            else:  # Single click
+                if event.button == 1:  # Left click
+                    x_coord = event.xdata
+                    y_coord = event.ydata
+                    column = int(x_coord / (64 + padding))  # 2 for padding induced by make_grid
+                    row = int(y_coord / (64 + padding))
+
+                    # Store latent vector corresponding to the image that the user clicked on.
+                    if len(happy_woman_latent_vectors) < num_of_vectors_per_category:
+                        happy_woman_latent_vectors.append(latent_vectors[10*row + column])
+                        print(f'Picked image row={row}, column={column} as {len(happy_woman_latent_vectors)}. happy woman.')
+                    elif len(neutral_woman_latent_vectors) < num_of_vectors_per_category:
+                        neutral_woman_latent_vectors.append(latent_vectors[10*row + column])
+                        print(f'Picked image row={row}, column={column} as {len(neutral_woman_latent_vectors)}. neutral woman.')
+                    elif len(neutral_man_latent_vectors) < num_of_vectors_per_category:
+                        neutral_man_latent_vectors.append(latent_vectors[10*row + column])
+                        print(f'Picked image row={row}, column={column} as {len(neutral_man_latent_vectors)}. neutral man.')
+                    else:
+                        plt.close()
+
+        plt.imshow(display_img)
+        plt.title('Click 3 happy women, 3 neutral women and 3 neutral men images (order matters!).')
+        cid = plt.gcf().canvas.mpl_connect('button_press_event', onclick)
+        plt.show()
+        plt.gcf().canvas.mpl_disconnect(cid)
+
+        print('Done choosing images.')
+
+
     else:
-        raise Exception(f'Generation mode {generation_mode.name} not yet supported.')
+        raise Exception(f'Generation mode not yet supported.')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'VANILLA_000000.pth')
+    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'DCGAN_000000.pth')
     parser.add_argument("--cgan_digit", type=int, help="Used only for cGAN - generate specified digit", default=3)
     parser.add_argument("--generation_mode", type=bool, help="Pick between 3 generation modes", default=GenerationMode.SINGLE_IMAGE)
     parser.add_argument("--slerp", type=bool, help="Should use spherical interpolation (default No)", default=False)

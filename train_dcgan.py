@@ -133,7 +133,7 @@ def train_dcgan(training_config):
                 torch.save(utils.get_training_state(generator_net, GANType.DCGAN.name), os.path.join(CHECKPOINTS_PATH, ckpt_model_name))
 
     # Save the latest generator in the binaries directory
-    torch.save(utils.get_training_state(generator_net, GANType.DCGAN.name), os.path.join(BINARIES_PATH, utils.get_available_binary_name()))
+    torch.save(utils.get_training_state(generator_net, GANType.DCGAN.name), os.path.join(BINARIES_PATH, utils.get_available_binary_name(GANType.DCGAN)))
 
 
 if __name__ == "__main__":
