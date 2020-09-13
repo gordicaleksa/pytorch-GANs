@@ -119,7 +119,7 @@ Make sure to change the `--model_name` param to your model's name (once you trai
 
 -----
 
-If you want to play with interpolation, just set the `--interpolation_mode` to `True`. <br/>
+If you want to play with interpolation, just set the `--generation_mode` to `GenerationMode.INTERPOLATION`. <br/>
 And optionally set `--slerp` to true if you want to use spherical interpolation.
 
 The first time you run it in this mode the script will start generating images, <br/>
@@ -199,6 +199,23 @@ Adding that vector to neutral man's latent vector, we hopefully get smiling man'
 
 You can also create the "sunglasses vector" and use it to add sunglasses to other faces, etc.
 
+*Note: I've created an interactive script so you can play with this check out `GenerationMode.VECTOR_ARITHMETIC`.*
+
+### Usage
+
+For training just check out [vanilla GAN](#training) (just make sure to use `train_dcgan.py` instead). <br/>
+The only difference is that this script will download [pre-processed CelebA dataset](https://s3.amazonaws.com/video.udacity-data.com/topher/2018/November/5be7eb6f_processed-celeba-small/processed-celeba-small.zip) instead of MNIST.
+
+#### Generating imagery
+
+Again just use the `generate_imagery.py` script.
+
+You have 3 options you can set the `generation_mode` to:
+* `GenerationMode.SINGLE_IMAGE` <- (same as for vGAN) generate a single image
+* `GenerationMode.INTERPOLATION` <- (same as for vGAN) pick 2 images you like and script will interpolate between them
+* `GenerationMode.VECTOR_ARITHMETIC` <- pick 9 images (**interactive matplotlib plot**) and script will do vector arithmetic
+
+Note: make sure to set `--model_name` to either `DCGAN_000000.pth` (pre-trained and checked-in) or your own model.
 
 ## Acknowledgements
 

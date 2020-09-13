@@ -151,7 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, help="height of content and style images", default=128)
 
     # logging/debugging/checkpoint related (helps a lot with experimentation)
-    parser.add_argument("--enable_tensorboard", type=bool, help="enable tensorboard logging (D and G loss)", default=False)
+    parser.add_argument("--enable_tensorboard", type=bool, help="enable tensorboard logging (D and G loss)", default=True)
     parser.add_argument("--debug_imagery_log_freq", type=int, help="log generator images during training (batch) freq", default=20)
     parser.add_argument("--console_log_freq", type=int, help="log to output console (batch) freq", default=20)
     parser.add_argument("--checkpoint_freq", type=int, help="checkpoint model saving (epoch) freq", default=2)

@@ -298,7 +298,7 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'DCGAN_000000.pth')
+    parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'VANILLA_000000.pth')
     parser.add_argument("--cgan_digit", type=int, help="Used only for cGAN - generate specified digit", default=3)
     parser.add_argument("--generation_mode", type=bool, help="Pick between 3 generation modes", default=GenerationMode.SINGLE_IMAGE)
     parser.add_argument("--slerp", type=bool, help="Should use spherical interpolation (default No)", default=False)
