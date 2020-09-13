@@ -265,6 +265,7 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
 
         plt.figure(figsize=(10, 10))
         plt.imshow(display_img)
+        # This is just an example you could also pick 3 neutral woman images with sunglasses, etc.
         plt.title('Click on 3 happy women, 3 neutral women and \n 3 neutral men images (order matters!)')
         cid = plt.gcf().canvas.mpl_connect('button_press_event', onclick)
         plt.show()

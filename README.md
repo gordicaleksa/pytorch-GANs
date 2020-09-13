@@ -211,9 +211,11 @@ The only difference is that this script will download [pre-processed CelebA data
 Again just use the `generate_imagery.py` script.
 
 You have 3 options you can set the `generation_mode` to:
-* `GenerationMode.SINGLE_IMAGE` <- (same as for vGAN) generate a single image
-* `GenerationMode.INTERPOLATION` <- (same as for vGAN) pick 2 images you like and script will interpolate between them
-* `GenerationMode.VECTOR_ARITHMETIC` <- pick 9 images (**interactive matplotlib plot**) and script will do vector arithmetic
+* `GenerationMode.SINGLE_IMAGE` <- generate a single face image
+* `GenerationMode.INTERPOLATION` <- pick 2 face images you like and script will interpolate between them
+* `GenerationMode.VECTOR_ARITHMETIC` <- pick 9 images and script will do vector arithmetic
+
+GenerationMode.VECTOR_ARITHMETIC will give you an **interactive matplotlib plot** to pick 9 images.
 
 Note: make sure to set `--model_name` to either `DCGAN_000000.pth` (pre-trained and checked-in) or your own model.
 
