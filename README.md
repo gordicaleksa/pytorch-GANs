@@ -49,26 +49,26 @@ like the usage of LeakyReLU and 1D batch normalization (it didn't even exist bac
 GAN was trained on data from MNIST dataset. Here is how the digits from the dataset look like:
 
 <p align="center">
-<img src="data/examples/real_samples/mnist_composite.jpg" width="850"/>
+<img src="data/examples/real_samples/mnist.jpg" width="850"/>
 </p>
 
 You can see how the network is slowly learning to capture the data distribution during training:
 
 <p align="center">
-<img src="data/examples/training/training_progress.gif" />
+<img src="data/examples/training_progress/training_progress_vgan.gif" />
 </p>
 
 After the generator is trained we can use it to generate all 10 digits! Looks like it's coming directly from MNIST, right!?
 
 <p align="center">
-<img src="data/examples/generated/generated_composite.jpg" width="850"/>
+<img src="data/examples/generated_samples/generated_vgan.jpg" width="850"/>
 </p>
 
 We can also pick 2 generated numbers that we like, save their latent vectors, and subsequently [linearly](https://en.wikipedia.org/wiki/Linear_interpolation) or [spherically](https://en.wikipedia.org/wiki/Slerp)<br/>
 interpolate between them to generate new images and understand how the latent space (z-space) is structured:
 
 <p align="center">
-<img src="data/examples/interpolated/interpolated_composite.jpg" width="850"/>
+<img src="data/examples/interpolation/vgan_interpolated.jpg" width="850"/>
 </p>
 
 We can see how the number 4 is slowly morphing into 9 and then into the number 3. <br/>
@@ -77,7 +77,7 @@ The idea behind spherical interpolation is super easy - instead of moving over t
 (line i.e. linear interpolation) from the first vector (p0) to the second (p1), you take the sphere's arc path: 
 
 <p align="center">
-<img src="data/examples/interpolated/slerp.png" width="330"/>
+<img src="data/examples/interpolation/slerp.png" width="330"/>
 </p>
 
 ### Usage
@@ -138,7 +138,7 @@ In addition to everything that we could do with the original GAN, here we can ex
 We make it dump 10x10 grid where each column is a single digit and this is how the learning proceeds:
 
 <p align="center">
-<img src="data/examples/training/training_progress_cgan.gif" />
+<img src="data/examples/training_progress/training_progress_cgan.gif" />
 </p>
 
 ### Usage
@@ -163,20 +163,20 @@ Batch normalization was invented in the meanwhile and that's what got CNNs to wo
 I trained DCGAN on preprocessed [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html). Here are some samples from the dataset:
 
 <p align="center">
-<img src="data/examples/real_samples/celeba_composite.jpg" width="850"/>
+<img src="data/examples/real_samples/celeba.jpg" width="850"/>
 </p>
 
 Again, you can see how the network is slowly learning to capture the data distribution during training:
 
 <p align="center">
-<img src="data/examples/training/training_progress_dcgan.gif" />
+<img src="data/examples/training_progress/training_progress_dcgan.gif" />
 </p>
 
 After the generator is trained we can use it to generate new faces! This problem is much harder than generating MNIST digits,
 so generated faces are not indistinguishable from the real ones.
 
 <p align="center">
-<img src="data/examples/generated/generated_dcgan.jpg" width="850"/>
+<img src="data/examples/generated_samples/generated_dcgan.jpg" width="850"/>
 </p>
 
 Some SOTA GAN papers did a much better job at generating faces, currently the best model is [StyleGAN2](https://github.com/NVlabs/stylegan2).
@@ -184,7 +184,7 @@ Some SOTA GAN papers did a much better job at generating faces, currently the be
 Similarly we can explore the structure of the latent space via interpolations:
 
 <p align="center">
-<img src="data/examples/interpolated/dcgan_interpolated.jpg" width="850"/>
+<img src="data/examples/interpolation/dcgan_interpolated.jpg" width="850"/>
 </p>
 
 We can see how the man's face is slowly morphing into woman's face and also the skin tan is changing gradually.
