@@ -46,7 +46,7 @@ like the usage of LeakyReLU and 1D batch normalization (it didn't even exist bac
 GAN was trained on data from MNIST dataset. Here is how the digits from the dataset look like:
 
 <p align="center">
-<img src="data/examples/mnist_samples/mnist_composite.jpg" width="850"/>
+<img src="data/examples/real_samples/mnist_composite.jpg" width="850"/>
 </p>
 
 You can see how the network is slowly learning to capture the data distribution during training:
@@ -151,7 +151,32 @@ Note: make sure to set `--model_name` to either `CGAN_000000.pth` (pre-trained a
 
 ## DCGAN
 
-Work In Progress.
+DCGAN is my implementation of the [DCGAN paper (Radford et al.)](https://arxiv.org/pdf/1511.06434.pdf).<br/>
+The main contribution of the paper was that they were the first who made CNNs successfully work in the GAN setup.<br/>
+Batch normalization was invented in the meanwhile and that's what got CNNs to work basically.
+
+### Examples
+
+I trained DCGAN on preprocessed [CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html). Here are some samples from the dataset:
+
+<p align="center">
+<img src="data/examples/real_samples/celeba_composite.jpg" width="850"/>
+</p>
+
+Again, you can see how the network is slowly learning to capture the data distribution during training:
+
+<p align="center">
+<img src="data/examples/training/training_progress_dcgan.gif" />
+</p>
+
+After the generator is trained we can use it to generate new faces! <br/>
+This problem is much harder than generating MNIST digits, so generated faces are not indistinguishable from the real ones.
+
+<p align="center">
+<img src="data/examples/generated/generated_dcgan.jpg" width="850"/>
+</p>
+
+Some SOTA GAN papers did a much better job at generating faces, currently the best model is [StyleGAN2](https://github.com/NVlabs/stylegan2).
 
 ## Acknowledgements
 

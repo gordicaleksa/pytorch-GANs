@@ -93,6 +93,31 @@ def spherical_interpolation(t, p0, p1):
     return np.sin((1.0 - t) * omega) / sin_omega * p0 + np.sin(t * omega) / sin_omega * p1
 
 
+def display_vector_arithmetic_results(imgs_to_display):
+    fig = plt.figure(figsize=(6, 6))
+    title_fontsize = 'x-small'
+    num_display_imgs = 7
+    titles = ['happy women', 'happy woman (avg)', 'neutral women', 'neutral woman (avg)', 'neutral men', 'neutral man (avg)', 'result - happy man']
+    ax = np.zeros(num_display_imgs, dtype=object)
+    assert len(imgs_to_display) == num_display_imgs, f'Expected {num_display_imgs} got {len(imgs_to_display)} images.'
+
+    gs = fig.add_gridspec(5, 4, left=0.02, right=0.98, wspace=0.05, hspace=0.3)
+    ax[0] = fig.add_subplot(gs[0, :3])
+    ax[1] = fig.add_subplot(gs[0, 3])
+    ax[2] = fig.add_subplot(gs[1, :3])
+    ax[3] = fig.add_subplot(gs[1, 3])
+    ax[4] = fig.add_subplot(gs[2, :3])
+    ax[5] = fig.add_subplot(gs[2, 3])
+    ax[6] = fig.add_subplot(gs[3:, 1:3])
+
+    for i in range(num_display_imgs):
+        ax[i].imshow(cv.resize(imgs_to_display[i], (0, 0), fx=3, fy=3, interpolation=cv.INTER_NEAREST))
+        ax[i].set_title(titles[i], fontsize=title_fontsize)
+        ax[i].tick_params(which='both', bottom=False, left=False, labelleft=False, labelbottom=False)
+
+    plt.show()
+
+
 def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp=True, a=None, b=None, should_display=True):
     """ Generate imagery using pre-trained generator (using vanilla_generator_000000.pth by default)
 
@@ -266,31 +291,7 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
 
         happy_man_img = generate_from_specified_numpy_latent_vector(generator, happy_man_latent_vector)
 
-        # Display picked, average of those and resulting images
-        fig = plt.figure(figsize=(6, 6))
-        title_fontsize = 'x-small'
-        num_display_imgs = 7
-        ax = np.zeros(num_display_imgs, dtype=object)
-        gs = fig.add_gridspec(5, 4, left=0.02, right=0.98, wspace=0.05, hspace=0.3)
-        ax[0] = fig.add_subplot(gs[0, :3])
-        ax[1] = fig.add_subplot(gs[0, 3])
-        ax[2] = fig.add_subplot(gs[1, :3])
-        ax[3] = fig.add_subplot(gs[1, 3])
-        ax[4] = fig.add_subplot(gs[2, :3])
-        ax[5] = fig.add_subplot(gs[2, 3])
-        ax[6] = fig.add_subplot(gs[3:, 1:3])
-
-        def plot_prepare_img(img):
-            return cv.resize(img, (0, 0), fx=3, fy=3, interpolation=cv.INTER_NEAREST)
-
-        titles = ['happy women', 'happy woman (avg)', 'neutral women', 'neutral woman (avg)', 'neutral men', 'neutral man (avg)', 'result - happy man']
-        imgs_to_display = [happy_women_imgs, happy_woman_avg_img, neutral_women_imgs, neutral_woman_avg_img, neutral_men_imgs, neutral_man_avg_img, happy_man_img]
-        for i in range(num_display_imgs):
-            ax[i].imshow(plot_prepare_img(imgs_to_display[i]))
-            ax[i].set_title(titles[i], fontsize=title_fontsize)
-            ax[i].tick_params(which='both', bottom=False, left=False, labelleft=False, labelbottom=False)
-
-        plt.show()
+        display_vector_arithmetic_results([happy_women_imgs, happy_woman_avg_img, neutral_women_imgs, neutral_woman_avg_img, neutral_men_imgs, neutral_man_avg_img, happy_man_img])
     else:
         raise Exception(f'Generation mode not yet supported.')
 
@@ -299,7 +300,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, help="Pre-trained generator model name", default=r'DCGAN_000000.pth')
     parser.add_argument("--cgan_digit", type=int, help="Used only for cGAN - generate specified digit", default=3)
-    parser.add_argument("--generation_mode", type=bool, help="Pick between 3 generation modes", default=GenerationMode.VECTOR_ARITHMETIC)
+    parser.add_argument("--generation_mode", type=bool, help="Pick between 3 generation modes", default=GenerationMode.SINGLE_IMAGE)
     parser.add_argument("--slerp", type=bool, help="Should use spherical interpolation (default No)", default=False)
     parser.add_argument("--should_display", type=bool, help="Display intermediate results", default=True)
     args = parser.parse_args()
