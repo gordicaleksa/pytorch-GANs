@@ -1,6 +1,9 @@
 ## PyTorch GANs :computer: vs :computer: = :heart:
 This repo contains PyTorch implementation of various GAN architectures. <br/>
-It's aimed at making it **easy for beginners** to start playing and learning about GANs.
+It's aimed at making it **easy for beginners** to start playing and learning about GANs. <br/>
+
+All of the repos I found do obscure things like setting bias in some network layer to `False` without explaining <br/>
+why certain design decisions were made. This repo makes **every design decision transparent.**
 
 ## Table of Contents
   * [What are GANs?](#what-are-gans)
@@ -169,14 +172,33 @@ Again, you can see how the network is slowly learning to capture the data distri
 <img src="data/examples/training/training_progress_dcgan.gif" />
 </p>
 
-After the generator is trained we can use it to generate new faces! <br/>
-This problem is much harder than generating MNIST digits, so generated faces are not indistinguishable from the real ones.
+After the generator is trained we can use it to generate new faces! This problem is much harder than generating MNIST digits,
+so generated faces are not indistinguishable from the real ones.
 
 <p align="center">
 <img src="data/examples/generated/generated_dcgan.jpg" width="850"/>
 </p>
 
 Some SOTA GAN papers did a much better job at generating faces, currently the best model is [StyleGAN2](https://github.com/NVlabs/stylegan2).
+
+Similarly we can explore the structure of the latent space via interpolations:
+
+<p align="center">
+<img src="data/examples/interpolated/dcgan_interpolated.jpg" width="850"/>
+</p>
+
+We can see how the man's face is slowly morphing into woman's face and also the skin tan is changing gradually.
+
+Finally, because the latent space has some nice properties (linear structure) we can do some interesting things.<br/>
+Subtracting neutral woman's latent vector from smiling woman's latent vector gives us the "smile vector". <br/>
+Adding that vector to neutral man's latent vector, we hopefully get smiling man's latent vector. And so it is!
+
+<p align="center">
+<img src="data/examples/vector_arithmetic/vector_arithmetic.jpg" />
+</p>
+
+You can also create the "sunglasses vector" and use it to add sunglasses to other faces, etc.
+
 
 ## Acknowledgements
 
