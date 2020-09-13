@@ -8,6 +8,7 @@ from torch import nn
 from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2 as cv
 
 
 import utils.utils as utils
@@ -45,9 +46,9 @@ def generate_from_random_latent_vector(generator, cgan_digit=None):
         if cgan_digit is None:
             generated_img = postprocess_generated_img(generator(latent_vector))
         else:  # condition and generate the digit specified by cgan_digit
-            ref_labels = torch.tensor([cgan_digit], dtype=torch.int64)
-            ref_labels_one_hot = torch.nn.functional.one_hot(ref_labels, MNIST_NUM_CLASSES).type(torch.FloatTensor).to(next(generator.parameters()).device)
-            generated_img = postprocess_generated_img(generator(latent_vector, ref_labels_one_hot))
+            ref_label = torch.tensor([cgan_digit], dtype=torch.int64)
+            ref_label_one_hot_encoding = torch.nn.functional.one_hot(ref_label, MNIST_NUM_CLASSES).type(torch.FloatTensor).to(next(generator.parameters()).device)
+            generated_img = postprocess_generated_img(generator(latent_vector, ref_label_one_hot_encoding))
 
     return generated_img, latent_vector.to('cpu').numpy()[0]
 
@@ -112,7 +113,7 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Prepare the correct (vanilla, cGAN, ...) model, load the weights and put the model into evaluation mode
+    # Prepare the correct (vanilla, cGAN, DCGAN, ...) model, load the weights and put the model into evaluation mode
     model_state = torch.load(model_path)
     gan_type = model_state["gan_type"]
     print(f'Found {gan_type} GAN!')
@@ -221,7 +222,7 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
                 if event.button == 1:  # left click
                     x_coord = event.xdata
                     y_coord = event.ydata
-                    column = int(x_coord / (64 + padding))  # 2 for padding induced by make_grid
+                    column = int(x_coord / (64 + padding))
                     row = int(y_coord / (64 + padding))
 
                     # Store latent vector corresponding to the image that the user clicked on.
@@ -239,32 +240,57 @@ def generate_new_images(model_name, cgan_digit=None, generation_mode=True, slerp
 
         plt.figure(figsize=(10, 10))
         plt.imshow(display_img)
-        plt.title('Click 3 happy women, 3 neutral women and \n 3 neutral men images (order matters!).')
+        plt.title('Click on 3 happy women, 3 neutral women and \n 3 neutral men images (order matters!)')
         cid = plt.gcf().canvas.mpl_connect('button_press_event', onclick)
         plt.show()
         plt.gcf().canvas.mpl_disconnect(cid)
         print('Done choosing images.')
 
+        # Calculate the average latent vector for every category (happy woman, neutral woman, neutral man)
         happy_woman_avg_latent_vector = np.mean(np.array(happy_woman_latent_vectors), axis=0)
         neutral_woman_avg_latent_vector = np.mean(np.array(neutral_woman_latent_vectors), axis=0)
         neutral_man_avg_latent_vector = np.mean(np.array(neutral_man_latent_vectors), axis=0)
 
-        happy_woman_latent_vectors.append(happy_woman_avg_latent_vector)
-        neutral_woman_latent_vectors.append(neutral_woman_avg_latent_vector)
-        neutral_man_latent_vectors.append(neutral_man_avg_latent_vector)
+        # By subtracting neutral woman from the happy woman we capture the "vector of smiling". Adding that vector
+        # to a neutral man we get a happy man's latent vector! Our latent space has amazingly beautiful structure!
+        happy_man_latent_vector = neutral_man_avg_latent_vector + (happy_woman_avg_latent_vector - neutral_woman_avg_latent_vector)
 
-        happy_women = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in happy_woman_latent_vectors])
-        neutral_women = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in neutral_woman_latent_vectors])
-        neutral_men = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in neutral_man_latent_vectors])
+        # Generate images from these latent vectors
+        happy_women_imgs = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in happy_woman_latent_vectors])
+        neutral_women_imgs = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in neutral_woman_latent_vectors])
+        neutral_men_imgs = np.hstack([generate_from_specified_numpy_latent_vector(generator, v) for v in neutral_man_latent_vectors])
 
-        happy_man_latent_vector = happy_woman_avg_latent_vector - neutral_woman_avg_latent_vector + neutral_man_avg_latent_vector
-        happy_man = generate_from_specified_numpy_latent_vector(generator, happy_man_latent_vector)
-        happy_man = np.hstack([np.zeros_like(happy_man), happy_man, np.zeros_like(happy_man), np.zeros_like(happy_man)])
+        happy_woman_avg_img = generate_from_specified_numpy_latent_vector(generator, happy_woman_avg_latent_vector)
+        neutral_woman_avg_img = generate_from_specified_numpy_latent_vector(generator, neutral_woman_avg_latent_vector)
+        neutral_man_avg_img = generate_from_specified_numpy_latent_vector(generator, neutral_man_avg_latent_vector)
 
-        plt.imshow(np.vstack([happy_women, neutral_women, neutral_men, happy_man]))
-        plt.title('your picks and results.')
+        happy_man_img = generate_from_specified_numpy_latent_vector(generator, happy_man_latent_vector)
+
+        # Display picked, average of those and resulting images
+        fig = plt.figure(figsize=(6, 6))
+        title_fontsize = 'x-small'
+        num_display_imgs = 7
+        ax = np.zeros(num_display_imgs, dtype=object)
+        gs = fig.add_gridspec(5, 4, left=0.02, right=0.98, wspace=0.05, hspace=0.3)
+        ax[0] = fig.add_subplot(gs[0, :3])
+        ax[1] = fig.add_subplot(gs[0, 3])
+        ax[2] = fig.add_subplot(gs[1, :3])
+        ax[3] = fig.add_subplot(gs[1, 3])
+        ax[4] = fig.add_subplot(gs[2, :3])
+        ax[5] = fig.add_subplot(gs[2, 3])
+        ax[6] = fig.add_subplot(gs[3:, 1:3])
+
+        def plot_prepare_img(img):
+            return cv.resize(img, (0, 0), fx=3, fy=3, interpolation=cv.INTER_NEAREST)
+
+        titles = ['happy women', 'happy woman (avg)', 'neutral women', 'neutral woman (avg)', 'neutral men', 'neutral man (avg)', 'result - happy man']
+        imgs_to_display = [happy_women_imgs, happy_woman_avg_img, neutral_women_imgs, neutral_woman_avg_img, neutral_men_imgs, neutral_man_avg_img, happy_man_img]
+        for i in range(num_display_imgs):
+            ax[i].imshow(plot_prepare_img(imgs_to_display[i]))
+            ax[i].set_title(titles[i], fontsize=title_fontsize)
+            ax[i].tick_params(which='both', bottom=False, left=False, labelleft=False, labelbottom=False)
+
         plt.show()
-
     else:
         raise Exception(f'Generation mode not yet supported.')
 
