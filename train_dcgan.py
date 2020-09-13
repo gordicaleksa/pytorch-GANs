@@ -38,8 +38,8 @@ def train_dcgan(training_config):
     # 1s will configure BCELoss into -log(x) whereas 0s will configure it to -log(1-x)
     # So that means we can effectively use binary cross-entropy loss to achieve adversarial loss!
     adversarial_loss = nn.BCELoss()
-    real_images_gt = torch.ones((training_config['batch_size'], 1), device=device)
-    fake_images_gt = torch.zeros((training_config['batch_size'], 1), device=device)
+    real_images_gt = torch.ones((training_config['batch_size'], 1, 1, 1), device=device)
+    fake_images_gt = torch.zeros((training_config['batch_size'], 1, 1, 1), device=device)
 
     # For logging purposes
     ref_batch_size = 25

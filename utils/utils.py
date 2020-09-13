@@ -139,6 +139,7 @@ def download_and_prepare_celeba(celeba_path):
     # Step4: Prepare the dataset into a suitable format for PyTorch's ImageFolder
     # I don't have any control over this zip so it's got bunch of junk that needs to be cleaned up.
     # I am also assuming that the directory structure will remain like this.
+    print(f'Preparing the CelebA dataset - this may take a while the first time.')
     shutil.rmtree(os.path.join(celeba_path, '__MACOSX'))
     dst_data_directory = os.path.join(celeba_path, 'processed_celeba_small')
     os.remove(os.path.join(dst_data_directory, '.DS_Store'))

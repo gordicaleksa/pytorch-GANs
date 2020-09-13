@@ -5,6 +5,8 @@ It's aimed at making it **easy for beginners** to start playing and learning abo
 All of the repos I found do obscure things like setting bias in some network layer to `False` without explaining <br/>
 why certain design decisions were made. This repo makes **every design decision transparent.**
 
+**Note: I'll add jupyter notebooks in a couple of days.**
+
 ## Table of Contents
   * [What are GANs?](#what-are-gans)
   * [Setup](#setup)
