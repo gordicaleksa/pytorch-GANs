@@ -41,6 +41,9 @@ Follow through points 1 and 2 of [this setup](https://github.com/Petlja/PSIML/bl
 
 ## Implementations
 
+Important note: you don't need to train the GANs to use this project I've checked-in pre-trained models. <br/>
+You can just use the `generate_imagery.py` script to play with the models.
+
 ## Vanilla GAN
 
 Vanilla GAN is my implementation of the [original GAN paper (Goodfellow et al.)](https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) with certain modifications mostly in the model architecture,
@@ -83,6 +86,20 @@ The idea behind spherical interpolation is super easy - instead of moving over t
 </p>
 
 ### Usage
+
+#### Option 1: Jupyter Notebook
+
+Just run `jupyter notebook` from you Anaconda console and it will open the session in your default browser. <br/>
+Open `Vanilla GAN (PyTorch).py` and you're ready to play! <br/>
+
+If you created the env before I added jupyter just do `pip install jupyter==1.0.0` and you're ready.
+
+---
+
+**Note:** if you get `DLL load failed while importing win32api: The specified module could not be found` <br/>
+Just do `pip uninstall pywin32` and then either `pip install pywin32` or `conda install pywin32` [should fix it](https://github.com/jupyter/notebook/issues/4980)!
+
+#### Option 2: Use your IDE of choice
 
 #### Training
 
